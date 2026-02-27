@@ -52,20 +52,23 @@ class BattleshipBoard:
         """
         Loads solution from Ship Model.
         
-        :param active_ships: List of ship objects or dicts
-                            {'row': r, 'col': c, 'length': L, 'vertical': bool}
+        :param active_ships: List of candidate dicts from solver_utils.
         """
         self.grid.fill(WATER)
 
         for ship in active_ships:
             length = ship['length']
-            r, c = ship['row'], ship['col']
-            is_vert = ship['vertical']
 
-            for k in range(length):
-                nr = r + k if is_vert else r
-                nc = c if is_vert else c + k
-                self.grid[nr, nc] = length
+            if 'cells' in ship:
+                for r, c in ship['cells']:
+                    self.grid[r, c] = length
+            else:
+                r, c = ship['row'], ship['col']
+                is_vert = (ship['orientation'] == 'V')
+                for k in range(length):
+                    nr = r + k if is_vert else r
+                    nc = c if is_vert else c + k
+                    self.grid[nr, nc] = length
 
     # Validation
 
