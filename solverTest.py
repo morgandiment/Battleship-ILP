@@ -1,5 +1,5 @@
 from board import BattleshipPuzzle, BattleshipBoard
-from solver import ShipModelSolver
+from ship_solver import ShipModelSolver
 
 def test_full_solver():
     print("--- Testing Full ILP Solver ---")

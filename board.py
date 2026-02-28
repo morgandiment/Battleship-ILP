@@ -169,3 +169,4 @@ class BattleshipBoard:
             print(f"{r}| {' '.join(row_char)} | {self.puzzle.row_tallies[r]}")
         print("  " + "-" * (self.size * 2))
         print("   " + " ".join(str(c) for c in self.puzzle.col_tallies))
+        # Need a renderer that checks for neighbours and draws the top/bottom/left/right of ships.
