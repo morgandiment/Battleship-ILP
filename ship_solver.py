@@ -5,7 +5,7 @@ from solver_utils import generate_ship_candidates
 
 class ShipModelSolver:
     """
-    Implements ship-based model from Meufells paper.
+    Ship-based model from Meufells paper.
     Variables: y[g] = 1 if ship candidate g is placed, 0 otherwise.
     """
     def __init__(self):
@@ -57,7 +57,7 @@ class ShipModelSolver:
             model.addConstr(expr == puzzle.col_tallies[c], name=f"Col_Tally_{c}")
 
         # Constraint: Geometry / Touching
-        print("Generating geometric conflicts... (this might take a second)")
+        print("Generating geometric conflicts...")
         conflicts = self._find_conflicts(candidates, size)
         print(f'Found {len(conflicts)} incompatible pairs.')
 

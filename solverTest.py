@@ -5,7 +5,7 @@ from cell_solver import CellModelSolver
 def test_full_solver():
     print("--- Testing Full ILP Solver ---")
     
-    # First efine the Puzzle (A known valid configuration)
+    # First define the Puzzle (A known valid configuration)
     # Example uses the same layout as boardTest
     # Row 0: Battleship (4) at 0,0
     # Row 2: Cruiser (3) at 2,6

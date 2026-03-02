@@ -31,8 +31,7 @@ class BattleshipBoard:
         for (r, c), val in puzzle.hints.items():
             self.grid[r, c] = val
 
-    # Model loaders
-
+    # Cell model loader
     def load_cell_model(self, s_vars, t_vars):
         """
         Loads solution from adapted Cell Model.
@@ -48,6 +47,7 @@ class BattleshipBoard:
                 else:
                     self.grid[r][c] = int(round(t_vars[r][c]))
 
+    # Ship model loader
     def load_ship_model(self, active_ships):
         """
         Loads solution from Ship Model.
@@ -71,7 +71,6 @@ class BattleshipBoard:
                     self.grid[nr, nc] = length
 
     # Validation
-
     def is_valid_solution(self):
         """
         Verifies fleet, geometry and tallies, independent of solver.
