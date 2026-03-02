@@ -1,5 +1,6 @@
 from board import BattleshipPuzzle, BattleshipBoard
 from ship_solver import ShipModelSolver
+from cell_solver import CellModelSolver
 
 def test_full_solver():
     print("--- Testing Full ILP Solver ---")
@@ -18,7 +19,8 @@ def test_full_solver():
     puzzle.fleet_spec = {4: 1, 3: 1}
     
     # Run Solver
-    solver = ShipModelSolver()
+    # solver = ShipModelSolver()
+    solver = CellModelSolver()
     result = solver.solve(puzzle)
     
     # Load results into Board
