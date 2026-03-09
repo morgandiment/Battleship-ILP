@@ -62,6 +62,52 @@ class CellModelSolver:
         if 1 in puzzle.fleet_spec:
             model.addConstr(x.sum('*', '*', SUB) == puzzle.fleet_spec[1], "Count_Subs")
 
+        for length, expected_count in puzzle.fleet_spec.items():
+            if length == 1: continue
+
+            detectors = []
+
+            # Horizontals
+            for r in range(rows):
+                for c in range(cols - length + 1):
+                    var_name = f"is_H_len{length}_{r}_{c}"
+                    is_ship = model.addVar(vtype=GRB.BINARY, name=var_name)
+                    detectors.append(is_ship)
+
+                    pieces = [x[r, c, LEFT]]
+                    for k in range(1, length - 1):
+                        pieces.append(x[r, c+k, MID])
+                    pieces.append(x[r, c+length-1, RIGHT])
+
+                    model.addConstr(is_ship <= x[r, c, LEFT])
+                    model.addConstr(is_ship <= x[r, c+length-2, RIGHT])
+                    for k in range(1, length-1):
+                        model.addConstr(is_ship <= x[r, c+k, MID])
+
+                    model.addConstr(is_ship >= gp.quicksum(pieces) - length + 1)
+
+            # Verticals
+            for c in range(cols):
+                for r in range(rows - length + 1):
+                    var_name = f"is_V_len{length}_{r}_{c}"
+                    is_ship = model.addVar(vtype=GRB.BINARY, name=var_name)
+                    detectors.append(is_ship)
+
+                    pieces = [x[r, c, TOP]]
+                    for k in range(1, length - 1):
+                        pieces.append(x[r + k, c, MID])
+                    pieces.append(x[r + length - 1, c, BOTTOM])
+
+                    model.addConstr(is_ship <= x[r, c, TOP])
+                    model.addConstr(is_ship <= x[r + length - 1, c, BOTTOM])
+                    for k in range(1, length - 1):
+                        model.addConstr(is_ship <= x[r + k, c, MID])
+
+                    model.addConstr(is_ship >= gp.quicksum(pieces) - length + 1)
+
+            # Exact count
+            model.addConstr(gp.quicksum(detectors) == expected_count, name=f"Count_Len{length}")
+
         # Geometry
         for r in range(rows):
             for c in range(cols):
@@ -128,14 +174,13 @@ class CellModelSolver:
                 model.addConstr(is_ship_C + is_ship_D <= 1)
 
         # Hints (Dealing with front/back)
-        for (r, c), val in puzzle.hints.items():
-            if val == 0:
-                model.addConstr(x[r,c,WATER] == 1)
-            else:
-                model.addConstr(x[r,c,WATER] == 0)
-
-                if val in [SUB, MID, LEFT, RIGHT, TOP, BOTTOM]:
-                    model.addConstr(x[r,c,val] == 1)
+        if hasattr(puzzle, 'hints') and puzzle.hints:
+            for (r, c), val in puzzle.hints.items():
+                if val == WATER:
+                    model.addConstr(x[r,c,WATER] == 1, name=f"Hint_W_{r}_{c}")
+                elif val in [SUB, MID, LEFT, RIGHT, TOP, BOTTOM]:
+                    # Force the exact shape variable to be 1
+                    model.addConstr(x[r,c,val] == 1, name=f"Hint_Shape_{r}_{c}")
 
         model.optimize()
 

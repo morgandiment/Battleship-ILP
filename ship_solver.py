@@ -3,6 +3,14 @@ from gurobipy import GRB
 import numpy as np
 from solver_utils import generate_ship_candidates
 
+WATER = 0
+SUB = 1
+MID = 2
+LEFT = 3
+RIGHT = 4
+TOP = 5
+BOTTOM = 6
+
 class ShipModelSolver:
     """
     Ship-based model from Meufells paper.
@@ -65,30 +73,54 @@ class ShipModelSolver:
             model.addConstr(y[id_a] + y[id_b] <= 1, name=f"Conflict_{id_a}_{id_b}")
 
         # Constraint: Hints
-        for (r, c_idx), val in puzzle.hints.items():
-            # Find candidates covering the cell
-            covering_ids = [cand['id'] for cand in candidates if (r, c_idx) in cand['cells']]
+        if hasattr(puzzle, 'hints') and puzzle.hints:
+            for (r, c_idx), val in puzzle.hints.items():
+                covering_ids = [cand['id'] for cand in candidates if (r, c_idx) in cand['cells']]
 
-            if not covering_ids:
-                if val > 0:
-                    print("Error: Hint says Ship, but no ship fits there.")
+                if not covering_ids and val != WATER:
+                    print(f"Error: Hint says Ship at {r},{c_idx}, but no ship fits there.")
                     return None
-                continue
 
-            expr = gp.quicksum(y[cid] for cid in covering_ids)
+                # Handle Water
+                if val == WATER:
+                    model.addConstr(gp.quicksum(y[cid] for cid in covering_ids) == 0, name=f"Hint_W_{r}_{c_idx}")
+                    continue
+                
+                # Handle Ship Shapes
+                # Must be a ship
+                model.addConstr(gp.quicksum(y[cid] for cid in covering_ids) == 1, name=f"Hint_S_{r}_{c_idx}")
 
-            if val == 0:
-                model.addConstr(expr == 0, name=f"Hint_Water_{r}_{c_idx}")
-            else:
-                model.addConstr(expr == 1, name=f"Hint_Ship_{r}_{c_idx}")
+                # Filter out candidates that violate specific shape
+                invalid_cids = []
+                for cid in covering_ids:
+                    cand = candidates[cid]
+                    cells = cand['cells']
+                    length = cand['length']
+                    orient = cand['orientation']
+                    
+                    # Find where this cell sits inside the candidate's list of cells
+                    idx = cells.index((r, c_idx))
+                    
+                    is_valid = False
+                    if val == SUB:
+                        is_valid = (length == 1)
+                    elif val == LEFT:
+                        is_valid = (orient == 'H' and length > 1 and idx == 0)
+                    elif val == RIGHT:
+                        is_valid = (orient == 'H' and length > 1 and idx == length - 1)
+                    elif val == TOP:
+                        is_valid = (orient == 'V' and length > 1 and idx == 0)
+                    elif val == BOTTOM:
+                        is_valid = (orient == 'V' and length > 1 and idx == length - 1)
+                    elif val == MID:
+                        is_valid = (length > 2 and 0 < idx < length - 1)
 
-                # If hint specifies length
-                if val > 0:
-                    incorrect_type_ids = [cid for cid in covering_ids
-                                          if candidates[cid]['length'] != val]
-                    if incorrect_type_ids:
-                        model.addConstr(gp.quicksum(y[cid] for cid in incorrect_type_ids) == 0,
-                                        name=f"Hint_Type_{r}_{c_idx}")
+                    if not is_valid:
+                        invalid_cids.append(cid)
+
+                # Ban all candidates that don't match shape
+                if invalid_cids:
+                    model.addConstr(gp.quicksum(y[cid] for cid in invalid_cids) == 0, name=f"Hint_ShapeBan_{r}_{c_idx}")
 
         # Optimise
         model.optimize()

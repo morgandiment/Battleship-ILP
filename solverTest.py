@@ -2,6 +2,14 @@ from board import BattleshipPuzzle, BattleshipBoard
 from ship_solver import ShipModelSolver
 from cell_solver import CellModelSolver
 
+WATER = 0
+SUB = 1
+MID = 2
+LEFT = 3
+RIGHT = 4
+TOP = 5
+BOTTOM = 6
+
 def test_full_solver():
     print("--- Testing Full ILP Solver ---")
     
@@ -12,11 +20,21 @@ def test_full_solver():
     # All others empty (Water)
     # Fleet overriden to keep it simple.
     
-    row_tallies = [4, 0, 3, 0, 0, 0, 0, 0, 0, 0]
-    col_tallies = [1, 1, 1, 1, 0, 0, 1, 1, 1, 0]
+    # Reduced fleet tallies
+    # row_tallies = [4, 0, 3, 0, 0, 0, 0, 0, 0, 0]
+    # col_tallies = [1, 1, 1, 1, 0, 0, 1, 1, 1, 0]
+
+    # Full fleet tallies with hints
+    row_tallies = [1, 4, 1, 2, 6, 2, 2, 2, 3, 2]
+    col_tallies = [5, 1, 5, 1, 1, 5, 0, 2, 4, 1]
+    my_hints = {
+        (1, 1): LEFT,
+        (2, 5): MID,
+        (7, 3): SUB
+    }
     
-    puzzle = BattleshipPuzzle(row_tallies, col_tallies)
-    puzzle.fleet_spec = {4: 1, 3: 1}
+    puzzle = BattleshipPuzzle(row_tallies, col_tallies, hints=my_hints)
+    # puzzle.fleet_spec = {4: 1, 3: 1}
     
     # Run Solver
     # solver = ShipModelSolver()
