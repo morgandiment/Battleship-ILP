@@ -16,8 +16,9 @@ class ShipModelSolver:
     Ship-based model from Meufells paper.
     Variables: y[g] = 1 if ship candidate g is placed, 0 otherwise.
     """
-    def __init__(self):
+    def __init__(self, verbose=False):
         # Initialises Gurobi env (cleans logs)
+        self.verbose = verbose
         self.env = gp.Env(empty=True)
         self.env.setParam("OutputFlag", 0)
         self.env.start()
@@ -65,9 +66,11 @@ class ShipModelSolver:
             model.addConstr(expr == puzzle.col_tallies[c], name=f"Col_Tally_{c}")
 
         # Constraint: Geometry / Touching
-        print("Generating geometric conflicts...")
+        if self.verbose:
+            print("Generating geometric conflicts...")
         conflicts = self._find_conflicts(candidates, size)
-        print(f'Found {len(conflicts)} incompatible pairs.')
+        if self.verbose:
+            print(f'Found {len(conflicts)} incompatible pairs.')
 
         for id_a, id_b in conflicts:
             model.addConstr(y[id_a] + y[id_b] <= 1, name=f"Conflict_{id_a}_{id_b}")
