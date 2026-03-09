@@ -33,13 +33,13 @@ class CellModelSolver:
         # Variables
         x = model.addVars(rows, cols, 7, vtype=GRB.BINARY, name="x")
 
-        # One state per cell
+        # 1. One state per cell
         model.addConstrs(
             (x.sum(r, c, '*') == 1 for r in range(rows) for c in range(cols)),
             name="UniqueState"
         )
 
-        # Row/Col tally sum
+        # 2. Row/Col tally sum
         for r in range(rows):
             model.addConstr(
                 gp.quicksum(x[r,c,k] for c in range(cols) for k in range(1, 7)) == puzzle.row_tallies[r],
@@ -51,7 +51,7 @@ class CellModelSolver:
                 name=f"Col_{c}"
             )
         
-        # Fleet inventory
+        # 3. Fleet inventory
         total_ships_expected = sum(puzzle.fleet_spec.values())
         
         model.addConstr(
@@ -59,11 +59,12 @@ class CellModelSolver:
             name="TotalFleetCount"
         )
 
-        if 1 in puzzle.fleet_spec:
-            model.addConstr(x.sum('*', '*', SUB) == puzzle.fleet_spec[1], "Count_Subs")
-
+        # 4. Pattern Matching
         for length, expected_count in puzzle.fleet_spec.items():
-            if length == 1: continue
+            length = int(length)
+            if length == 1: 
+                model.addConstr(x.sum('*', '*', SUB) == expected_count, "Count_Subs") 
+                continue
 
             detectors = []
 
@@ -74,17 +75,14 @@ class CellModelSolver:
                     is_ship = model.addVar(vtype=GRB.BINARY, name=var_name)
                     detectors.append(is_ship)
 
-                    pieces = [x[r, c, LEFT]]
+                    pieces = [x[r, c, LEFT], x[r, c + length - 1, RIGHT]]
                     for k in range(1, length - 1):
-                        pieces.append(x[r, c+k, MID])
-                    pieces.append(x[r, c+length-1, RIGHT])
+                        pieces.append(x[r, c + k, MID])
 
-                    model.addConstr(is_ship <= x[r, c, LEFT])
-                    model.addConstr(is_ship <= x[r, c+length-2, RIGHT])
-                    for k in range(1, length-1):
-                        model.addConstr(is_ship <= x[r, c+k, MID])
-
-                    model.addConstr(is_ship >= gp.quicksum(pieces) - length + 1)
+                    # Safe loop to avoid index typos
+                    for p in pieces:
+                        model.addConstr(is_ship <= p, name=f"HBind1_{length}_{r}_{c}")
+                    model.addConstr(is_ship >= gp.quicksum(pieces) - length + 1, name=f"HBind2_{length}_{r}_{c}")
 
             # Verticals
             for c in range(cols):
@@ -93,22 +91,19 @@ class CellModelSolver:
                     is_ship = model.addVar(vtype=GRB.BINARY, name=var_name)
                     detectors.append(is_ship)
 
-                    pieces = [x[r, c, TOP]]
+                    pieces = [x[r, c, TOP], x[r + length - 1, c, BOTTOM]]
                     for k in range(1, length - 1):
                         pieces.append(x[r + k, c, MID])
-                    pieces.append(x[r + length - 1, c, BOTTOM])
 
-                    model.addConstr(is_ship <= x[r, c, TOP])
-                    model.addConstr(is_ship <= x[r + length - 1, c, BOTTOM])
-                    for k in range(1, length - 1):
-                        model.addConstr(is_ship <= x[r + k, c, MID])
-
-                    model.addConstr(is_ship >= gp.quicksum(pieces) - length + 1)
+                    # Safe loop
+                    for p in pieces:
+                        model.addConstr(is_ship <= p, name=f"VBind1_{length}_{r}_{c}")
+                    model.addConstr(is_ship >= gp.quicksum(pieces) - length + 1, name=f"VBind2_{length}_{r}_{c}")
 
             # Exact count
             model.addConstr(gp.quicksum(detectors) == expected_count, name=f"Count_Len{length}")
 
-        # Geometry
+        # 5. Geometry
         for r in range(rows):
             for c in range(cols):
                 # Left
@@ -135,32 +130,27 @@ class CellModelSolver:
                 else:
                     model.addConstr(x[r,c,BOTTOM] == 0)
 
-                # Sub neighbours orthogonal
-                for dr, dc in [(0,1), (0,-1), (1,0), (-1,0)]:
-                    nr, nc = r+dr, c+dc
-                    if 0 <= nr < rows and 0 <= nc < cols:
-                        model.addConstr(x[r,c,SUB] + x[nr,nc,MID] + x[nr,nc,LEFT] + \
-                                        x[nr,nc,RIGHT] + x[nr,nc,TOP] + x[nr,nc,BOTTOM] <= 1)
 
-                # If mid active, must have entry neighbour
-                neighbors_in = []
-                if c > 0: neighbors_in.append(x[r,c-1,LEFT] + x[r,c-1,MID])
-                if r > 0: neighbors_in.append(x[r-1,c,TOP] + x[r-1,c,MID])
-                
-                if neighbors_in:
-                    model.addConstr(x[r,c,MID] <= gp.quicksum(neighbors_in), name=f"MidIn_{r}_{c}")
-                else:
-                    model.addConstr(x[r,c,MID] == 0)
-
-                # And exit neighbour neighbor
-                neighbors_out = []
-                if c < cols - 1: neighbors_out.append(x[r,c+1,RIGHT] + x[r,c+1,MID])
-                if r < rows - 1: neighbors_out.append(x[r+1,c,BOTTOM] + x[r+1,c,MID])
-                
-                if neighbors_out:
-                    model.addConstr(x[r,c,MID] <= gp.quicksum(neighbors_out), name=f"MidOut_{r}_{c}")
-                else:
-                    model.addConstr(x[r,c,MID] == 0)
+            # 6. Linearised Degree Contsraints (prevents ship overlapping)
+            for r in range(rows):
+                for c in range(cols):
+                    neighbors = []
+                    for dr, dc in [(0,1), (0,-1), (1,0), (-1,0)]:
+                        nr, nc = r+dr, c+dc
+                        if 0 <= nr < rows and 0 <= nc < cols:
+                            neighbors.append(1 - x[nr,nc,WATER])
+                    
+                    if neighbors:
+                        n_count = gp.quicksum(neighbors)
+                        # SUB: 0 neighbors
+                        model.addConstr(n_count <= 4 * (1 - x[r,c,SUB]))
+                        # ENDS: exactly 1 neighbor
+                        ends = x[r,c,LEFT] + x[r,c,RIGHT] + x[r,c,TOP] + x[r,c,BOTTOM]
+                        model.addConstr(n_count <= 1 + 3 * (1 - ends))
+                        model.addConstr(n_count >= 1 - 1 * (1 - ends))
+                        # MID: exactly 2 neighbors
+                        model.addConstr(n_count <= 2 + 2 * (1 - x[r,c,MID]))
+                        model.addConstr(n_count >= 2 - 2 * (1 - x[r,c,MID]))
 
         # Diagonal Constraints
         for r in range(rows - 1):
@@ -184,10 +174,18 @@ class CellModelSolver:
 
         model.optimize()
 
-        # Output
+        # Output / IIS Debug
         if model.Status == GRB.OPTIMAL:
             active_ships = self._extract_ships_from_grid(x, rows, cols)
             return active_ships
+        elif model.Status == GRB.INFEASIBLE:
+            print("\nGurobi proved Infeasible. Calculaing reason...")
+            model.computeIIS()
+            print("The following constraints are logically contradicitng with each other:")
+            for c_info in model.getConstrs():
+                if c_info.IISConstr:
+                    print(f" -> {c_info.ConstrName}")
+            return None
         else:
             return None
         
