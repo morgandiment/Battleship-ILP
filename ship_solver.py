@@ -66,12 +66,35 @@ class ShipModelSolver:
         # Constraint: Geometry / Touching
         if self.verbose:
             print("Generating geometric conflicts...")
-        conflicts = self._find_conflicts(candidates, size)
-        if self.verbose:
-            print(f'Found {len(conflicts)} incompatible pairs.')
 
-        for id_a, id_b in conflicts:
-            model.addConstr(y[id_a] + y[id_b] <= 1, name=f"Conflict_{id_a}_{id_b}")
+        # Map which candidates occupy which cell
+        occupancy = {(r, c): [] for r in range(size) for c in range(size)}
+        for cand in candidates:
+            for r, c in cand['cells']:
+                occupancy[(r, c)].append(cand['id'])
+
+        # Preventing overlaps in same square
+        for (r, c), cids in occupancy.items():
+            if len(cids) > 1:
+                model.addConstr(gp.quicksum(y[cid] for cid in cids) <= 1, name=f"NoOverlap_{r}_{c}")
+
+        # Preventing orthogonal and diagonal touching
+        directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+
+        for r in range(size):
+            for c in range(size):
+                for dr, dc in directions:
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < size and 0 <= nc < size:
+                        # Combine candidates occupying cell A and neighbour cell B
+                        combined_cids = set(occupancy[(r, c)] + occupancy[(nr, nc)])
+
+                        # If multiple candidates are fighting for space, enforce limit
+                        if len(combined_cids) > 1:
+                            model.addConstr(
+                                gp.quicksum(y[cid] for cid in combined_cids) <= 1,
+                                name=f"NoTouch_{r}_{c}_to_{nr}_{nc}"
+                            )
 
         # Constraint: Hints
         if hasattr(puzzle, 'hints') and puzzle.hints:
@@ -138,36 +161,3 @@ class ShipModelSolver:
             # Debug line
             # model.computeIIS(); model.write("model.ilp")
             return None
-        
-    def _find_conflicts(self, candidates, size):
-        """
-        Returns list of tuples (id_a, id_b) that cannot coexist
-        because they overlap or touch.
-        """
-        occupancy = {}
-        for cand in candidates:
-            for cell in cand['cells']:
-                if cell not in occupancy: occupancy[cell] = []
-                occupancy[cell].append(cand['id'])
-
-        conflicts = set()
-
-        for cand in candidates:
-            forbidden_cells = set()
-            for r, c in cand['cells']:
-                forbidden_cells.add((r, c))
-                for dr in [-1, 0, 1]:
-                    for dc in [-1, 0, 1]:
-                        if dr==0 and dc==0: continue
-                        nr, nc = r+dr, c+dc
-                        if 0 <= nr < size and 0 <= nc < size:
-                            forbidden_cells.add((nr, nc))
-            
-            for cell in forbidden_cells:
-                if cell in occupancy:
-                    for other_id in occupancy[cell]:
-                        if other_id != cand['id']:
-                            pair = tuple(sorted((cand['id'], other_id)))
-                            conflicts.add(pair)
-
-        return list(conflicts)
