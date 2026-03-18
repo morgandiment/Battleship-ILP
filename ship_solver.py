@@ -58,12 +58,10 @@ class ShipModelSolver:
                 col_map[c_idx].append(c['id'])
 
         for r in range(size):
-            expr = gp.quicksum(y[c['id']] for c in candidates for (cr, cc) in c['cells'] if cr == r)
-            model.addConstr(expr == puzzle.row_tallies[r], name=f"Row_Tally_{r}")
+            model.addConstr(gp.quicksum(y[cid] for cid in row_map[r]) == puzzle.row_tallies[r], name=f"Row_Tally_{r}")
 
         for c in range(size):
-            expr = gp.quicksum(y[cand['id']] for cand in candidates for (cr, cc) in cand['cells'] if cc == c)
-            model.addConstr(expr == puzzle.col_tallies[c], name=f"Col_Tally_{c}")
+            model.addConstr(gp.quicksum(y[cid] for cid in col_map[c]) == puzzle.col_tallies[c], name=f"Col_Tally_{c}")
 
         # Constraint: Geometry / Touching
         if self.verbose:
