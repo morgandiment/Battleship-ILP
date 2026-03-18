@@ -152,7 +152,7 @@ class CellModelSolver:
                         model.addConstr(n_count <= 2 + 2 * (1 - x[r,c,MID]))
                         model.addConstr(n_count >= 2 - 2 * (1 - x[r,c,MID]))
 
-        # Diagonal Constraints
+        # 7. Diagonal Constraints
         for r in range(rows - 1):
             for c in range(cols - 1):
                 is_ship_A = gp.quicksum(x[r,c,k] for k in range(1,7))
@@ -163,7 +163,35 @@ class CellModelSolver:
                 is_ship_D = gp.quicksum(x[r+1,c,k] for k in range(1,7))
                 model.addConstr(is_ship_C + is_ship_D <= 1)
 
-        # Hints (Dealing with front/back)
+        # IMPROVISATIONS (A-D)
+        # A. Global parity (LR and TB piece nums must match)
+        # model.addConstr(x.sum('*', '*', LEFT) == x.sum('*', '*', RIGHT), name="Global_LR_Parity")
+        # model.addConstr(x.sum('*', '*', TOP) == x.sum('*', '*', BOTTOM), name="Global_TB_Parity")
+
+        # B. Line-specific parity (Num of LR/TB pieces in a line/column must match)
+        # for r in range(rows):
+        #     model.addConstr(x.sum(r, '*', LEFT) == x.sum(r, '*', RIGHT), name=f"Row_LR_Parity_{r}")
+        # for c in range(cols):
+        #     model.addConstr(x.sum('*', c, TOP) == x.sum('*', c, BOTTOM), name=f"Col_TB_Parity_{c}")
+
+        # C. Tally-based impossibilities (if tally is 1, can't be LRTB end piece)
+        # for r in range(rows):
+        #     if puzzle.row_tallies[r] == 1:
+        #         for c in range(cols):
+        #             model.addConstr(x[r,c,LEFT] == 0, name=f"TallyImpL_{r}_{c}")
+        #             model.addConstr(x[r,c,RIGHT] == 0, name=f"TallyImpR_{r}_{c}")
+        # for c in range(cols):
+        #     if puzzle.col_tallies[c] == 1:
+        #         for r in range(rows):
+        #             model.addConstr(x[r,c,TOP] == 0, name=f"TallyImpT_{r}_{c}")
+        #             model.addConstr(x[r,c,BOTTOM] == 0, name=f"TallyImpB_{r}_{c}")
+
+        # D. Corner banning (can't be middle piece)
+        corners = [(0,0), (0, cols-1), (rows-1, 0), (rows-1, cols-1)]
+        for r_corn, c_corn in corners:
+            model.addConstr(x[r_corn, c_corn, MID] == 0, name=f"NoMidCorner_{r_corn}_{c_corn}")
+
+        # 8. Hints (Dealing with front/back)
         if hasattr(puzzle, 'hints') and puzzle.hints:
             for (r, c), val in puzzle.hints.items():
                 if val == WATER:
