@@ -1,5 +1,7 @@
 import re
 import time
+from datetime import datetime
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 
@@ -128,9 +130,14 @@ def plot_scatter_results(ids, ship_times, cell_times, categories):
     ax.legend(loc='upper left', framealpha=0.9)
     ax.grid(True, linestyle=':', alpha=0.6)
     
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    results_dir = Path(__file__).resolve().parent / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    out_file = results_dir / f"solver_difficulty_scatter_{timestamp}.png"
+
     plt.tight_layout()
-    plt.savefig("solver_difficulty_scatter.png", dpi=300)
-    print("\nScatter plot saved as 'solver_difficulty_scatter.png'")
+    plt.savefig(out_file, dpi=300)
+    print(f"\nScatter plot saved at '{out_file}'")
     plt.show()
 
 def run_evaluation(filepath):
