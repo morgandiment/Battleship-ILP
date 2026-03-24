@@ -1,7 +1,7 @@
+# Misc
 __pycache__/
 .vscode
 .DS_Store
-*.png
 
 # LaTeX
 *.aux
@@ -10,3 +10,7 @@ __pycache__/
 *.log
 *.pdf
 *.synctex.gz
+
+# Generated data
+data/scalable_puzzles.txt
+*.png

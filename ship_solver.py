@@ -1,6 +1,5 @@
 import gurobipy as gp
 from gurobipy import GRB
-import numpy as np
 from solver_utils import generate_ship_candidates
 
 WATER = 0

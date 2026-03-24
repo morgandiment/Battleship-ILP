@@ -1,5 +1,3 @@
-import numpy as np
-
 def generate_ship_candidates(size, fleet_spec):
     """
     Generates all valid ship placements for the given fleet.

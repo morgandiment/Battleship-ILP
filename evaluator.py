@@ -1,9 +1,7 @@
 import re
 import time
 
-import os
 import matplotlib.pyplot as plt
-import numpy as np
 
 from board import BattleshipPuzzle
 from cell_solver import CellModelSolver
@@ -221,5 +219,6 @@ def run_evaluation(filepath):
 if __name__ == "__main__":
     # DATA_FILE = "data/csplibExample.txt"
     DATA_FILE = "data/csplib.pl"
-    
+    # DATA_FILE = "data/scalable_puzzles.txt"
+
     run_evaluation(DATA_FILE)
