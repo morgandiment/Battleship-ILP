@@ -141,6 +141,56 @@ def plot_scatter_results(ids, ship_times, cell_times, categories):
     print(f"\nScatter plot saved at '{out_file}'")
     plt.show()
 
+def plot_cactus_results(ship_times, cell_times):
+    """
+    Generates a cumulative performance (Cactus) plot.
+    X-axis: Number of instances solved.
+    Y-axis: Time taken to solve that instance.
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Filter out failures
+    valid_ship = [t for t in ship_times if t > 0]
+    valid_cell = [t for t in cell_times if t > 0]
+    
+    # Sort times in ascending order
+    valid_ship.sort()
+    valid_cell.sort()
+    
+    # X-axis
+    x_ship = range(1, len(valid_ship) + 1)
+    x_cell = range(1, len(valid_cell) + 1)
+    
+    # Plot the lines
+    if valid_ship:
+        ax.plot(x_ship, valid_ship, label='Ship Model', 
+                color='blue', linewidth=2, marker='o', markersize=4, markevery=max(1, len(valid_ship)//20))
+    if valid_cell:
+        ax.plot(x_cell, valid_cell, label='Cell Model', 
+                color='red', linewidth=2, marker='^', markersize=4, markevery=max(1, len(valid_cell)//20))
+        
+    # Formatting
+    ax.set_xlabel('Number of Puzzles Solved', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Time to Solve (Seconds)', fontsize=12, fontweight='bold')
+    ax.set_title('Cumulative Solver Performance (Cactus Plot)', fontsize=14, fontweight='bold')
+    
+    # Optional: Logarithmic Y-axis if the time differences are massive
+    # ax.set_yscale('log') 
+    
+    ax.legend(loc='upper left', framealpha=0.9, fontsize=11)
+    ax.grid(True, linestyle='--', alpha=0.7)
+    
+    # Save the plot
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    results_dir = Path(__file__).resolve().parent / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    out_file = results_dir / f"solver_cactus_{timestamp}.png"
+
+    plt.tight_layout()
+    plt.savefig(out_file, dpi=300)
+    print(f"Cactus plot saved at '{out_file}'")
+    plt.show()
+
 def run_evaluation(filepath, solver_choice):
     """
     Loads all puzzles from the file and runs them through the selected solver(s).
@@ -244,8 +294,9 @@ def run_evaluation(filepath, solver_choice):
 
     if solver_choice == 'BOTH':
         plot_scatter_results(ids, ship_times, cell_times, categories)
+        plot_cactus_results(ship_times, cell_times)
     else:
-        print("\nSkipping scatter plot generation (requires BOTH solvers to be run).")
+        print("\nSkipping plot generation (requires BOTH solvers to be run).")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate Battleship Solitaire ILP models.")
