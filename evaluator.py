@@ -1,5 +1,6 @@
 import re
 import time
+import argparse
 from datetime import datetime
 from pathlib import Path
 
@@ -140,13 +141,18 @@ def plot_scatter_results(ids, ship_times, cell_times, categories):
     print(f"\nScatter plot saved at '{out_file}'")
     plt.show()
 
-def run_evaluation(filepath):
+def run_evaluation(filepath, solver_choice):
     """
-    Loads all puzzles from the file and runs them through both solvers.
-    Prints a statisitcal summary.
+    Loads all puzzles from the file and runs them through the selected solver(s).
+    Prints a statistical summary.
     """
     print(f"Loading puzzles from {filepath}...")
-    puzzles = parse_prolog_csplib(filepath)
+    try:
+        puzzles = parse_prolog_csplib(filepath)
+    except FileNotFoundError:
+        print(f"Error: The file '{filepath}' was not found.")
+        return
+
     print(f"Found {len(puzzles)} puzzles. Starting evaluation...\n")
     
     # Updated Table Header
@@ -154,14 +160,11 @@ def run_evaluation(filepath):
     print("-" * 60)
     
     # Initialize both solvers
-    cell_solver = CellModelSolver()
-    ship_solver = ShipModelSolver()
+    cell_solver = CellModelSolver() if solver_choice in ['CELL', 'BOTH'] else None
+    ship_solver = ShipModelSolver() if solver_choice in ['SHIP', 'BOTH'] else None
 
     # Data for graph
-    ids = []
-    ship_times = []
-    cell_times = []
-    categories = []
+    ids, ship_times, cell_times, categories = [], [], [], []
     
     for puzzle in puzzles:
         size = len(puzzle.row_tallies)
@@ -169,63 +172,85 @@ def run_evaluation(filepath):
         diff = get_difficulty(puzzle.hints)
         ids.append(str(puzzle.id))
         categories.append(diff)
+
+        ship_status = "N/A"
+        cell_status = "N/A"
+        s_time = 0
+        c_time = 0
         
         # Evaluate Ship Model
-        start_time_ship = time.time()
-        res_ship = ship_solver.solve(puzzle)
-        ship_time = time.time() - start_time_ship
-        
-        if res_ship:
-            ship_status = f"{ship_time:.4f}s"
-            ship_times.append(ship_time)
-        else:
-            ship_status = "Infeasible"
-            ship_times.append(0)
+        if ship_solver:
+            start_time_ship = time.time()
+            res_ship = ship_solver.solve(puzzle)
+            ship_time = time.time() - start_time_ship
+            
+            if res_ship:
+                ship_status = f"{ship_time:.4f}s"
+                ship_times.append(ship_time)
+            else:
+                ship_status = "Infeasible"
+                ship_times.append(0)
 
         # Evaluate Cell Model 
-        start_time_cell = time.time()
-        res_cell = cell_solver.solve(puzzle)
-        cell_time = time.time() - start_time_cell
-        
-        if res_cell:
-            cell_status = f"{cell_time:.4f}s"
-            cell_times.append(cell_time)
-        else:
-            cell_status = "Infeasible"
-            cell_times.append(0)
+        if cell_solver:
+            start_time_cell = time.time()
+            res_cell = cell_solver.solve(puzzle)
+            cell_time = time.time() - start_time_cell
             
+            if res_cell:
+                cell_status = f"{cell_time:.4f}s"
+                cell_times.append(cell_time)
+            else:
+                cell_status = "Infeasible"
+                cell_times.append(0)
+                
         # Print side-by-side comparison
         print(f"{puzzle.id:<6} | {size}x{size:<4} | {num_hints:<5} | {diff:<6} | {ship_status:<12} | {cell_status:<12}")
 
     # Results summary
     print("\n" + "="*60)
-    print("EVALUATION SUMMARY BY DIFFICULTY".center(60))
+    print(f"EVALUATION SUMMARY BY DIFFICULTY ({solver_choice})".center(60))
     print("="*60)
     
     for diff_level in ['Easy', 'Medium', 'Hard']:
         # Filter metrics for this specific difficulty
-        d_ships = [s for s, c, cat in zip(ship_times, cell_times, categories) if s > 0 and c > 0 and cat == diff_level]
-        d_cells = [c for s, c, cat in zip(ship_times, cell_times, categories) if s > 0 and c > 0 and cat == diff_level]
+        d_ships = [s for s, cat in zip(ship_times, categories) if s > 0 and cat == diff_level]
+        d_cells = [c for c, cat in zip(cell_times, categories) if c > 0 and cat == diff_level]
         
-        count = len(d_ships)
-        if count == 0:
+        count_ships = len(d_ships)
+        count_cells = len(d_cells)
+
+        if count_ships == 0 and count_cells == 0:
             continue
-            
-        ship_wins = sum(1 for s, c in zip(d_ships, d_cells) if s < c)
-        cell_wins = sum(1 for s, c in zip(d_ships, d_cells) if c < s)
-        ship_avg = sum(d_ships) / count
-        cell_avg = sum(d_cells) / count
+
+        print(f"{diff_level.upper()}".center(60)) 
+
+        if solver_choice in ['SHIP', 'BOTH'] and count_ships > 0:
+            ship_avg = sum(d_ships) / count_ships
+            print(f"  Ship Model -> Solved: {count_ships} | Avg Time: {ship_avg:.4f}s")
+
+        if solver_choice in ['CELL', 'BOTH'] and count_cells > 0:
+            cell_avg = sum(d_cells) / count_cells
+            print(f"  Cell Model -> Solved: {count_cells} | Avg Time: {cell_avg:.4f}s")
+
+        if solver_choice == 'BOTH' and count_ships > 0 and count_cells > 0:
+            joint_pairs =  [(s, c) for s, c, cat in zip(ship_times, cell_times, categories) if s > 0 and c > 0 and cat == diff_level]
+            if joint_pairs:
+                ship_wins = sum(1 for s, c in joint_pairs if s < c)
+                cell_wins = sum(1 for s, c in joint_pairs if c < s)
+                print(f"  Win Count -> Ship: {ship_wins:<6} | Cell: {cell_wins:<6}")
         
-        print(f"[{diff_level.upper()}] - {count} Puzzles Jointly Solved")
-        print(f"  Avg Time  -> Ship: {ship_avg:.4f}s | Cell: {cell_avg:.4f}s")
-        print(f"  Win Count -> Ship: {ship_wins:<6} | Cell: {cell_wins:<6}")
         print("-" * 60)
 
-    plot_scatter_results(ids, ship_times, cell_times, categories)
+    if solver_choice == 'BOTH':
+        plot_scatter_results(ids, ship_times, cell_times, categories)
+    else:
+        print("\nSkipping scatter plot generation (requires BOTH solvers to be run).")
 
 if __name__ == "__main__":
-    # DATA_FILE = "data/csplibExample.txt"
-    DATA_FILE = "data/csplib.pl"
-    # DATA_FILE = "data/scalable_puzzles.txt"
+    parser = argparse.ArgumentParser(description="Evaluate Battleship Solitaire ILP models.")
+    parser.add_argument('filepath', type=str, help="Path to the CSPLib formatted dataset (e.g., data/test.pl)")
+    parser.add_argument('--solver', type=str, choices=['CELL', 'SHIP', 'BOTH'], default='BOTH', help="Which solver to run: CELL, SHIP or BOTH (default is BOTH)")
+    args = parser.parse_args()
 
-    run_evaluation(DATA_FILE)
+    run_evaluation(args.filepath, args.solver)
