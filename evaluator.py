@@ -4,6 +4,8 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from board import BattleshipPuzzle
@@ -139,7 +141,7 @@ def plot_scatter_results(ids, ship_times, cell_times, categories):
     plt.tight_layout()
     plt.savefig(out_file, dpi=300)
     print(f"\nScatter plot saved at '{out_file}'")
-    plt.show()
+    # plt.show()
 
 def plot_cactus_results(ship_times, cell_times):
     """
@@ -189,7 +191,7 @@ def plot_cactus_results(ship_times, cell_times):
     plt.tight_layout()
     plt.savefig(out_file, dpi=300)
     print(f"Cactus plot saved at '{out_file}'")
-    plt.show()
+    # plt.show()
 
 def run_evaluation(filepath, solver_choice):
     """
