@@ -85,7 +85,7 @@ def get_difficulty(hints_dict):
     else:
         return "Hard"
 
-def plot_scatter_results(ids, ship_times, cell_times, categories):
+def plot_scatter_results(ids, ship_times, cell_times, categories, timestamp):
     """
     Generates a scatter plot comparing solve times across a large dataset and difficulties.
     """
@@ -133,7 +133,6 @@ def plot_scatter_results(ids, ship_times, cell_times, categories):
     ax.legend(loc='upper left', framealpha=0.9)
     ax.grid(True, linestyle=':', alpha=0.6)
     
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     results_dir = Path(__file__).resolve().parent / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
     out_file = results_dir / f"solver_difficulty_scatter_{timestamp}.png"
@@ -143,7 +142,7 @@ def plot_scatter_results(ids, ship_times, cell_times, categories):
     print(f"\nScatter plot saved at '{out_file}'")
     # plt.show()
 
-def plot_cactus_results(ship_times, cell_times):
+def plot_cactus_results(ship_times, cell_times, timestamp):
     """
     Generates a cumulative performance (Cactus) plot.
     X-axis: Number of instances solved.
@@ -183,7 +182,6 @@ def plot_cactus_results(ship_times, cell_times):
     ax.grid(True, linestyle='--', alpha=0.7)
     
     # Save the plot
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     results_dir = Path(__file__).resolve().parent / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
     out_file = results_dir / f"solver_cactus_{timestamp}.png"
@@ -192,6 +190,49 @@ def plot_cactus_results(ship_times, cell_times):
     plt.savefig(out_file, dpi=300)
     print(f"Cactus plot saved at '{out_file}'")
     # plt.show()
+
+def plot_line_comparison(sizes, ship_times, cell_times, timestamp):
+    """
+    Generates a line graph comparing Cell vs Ship models across different grid sizes.
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Convert n x n to total cells
+    total_cells = [s * s for s in sizes]
+    unique_cells = sorted(list(set(total_cells)))
+    
+    avg_ship = []
+    avg_cell = []
+    
+    for uc in unique_cells:
+        # Get times for this grid size, ignoring infeasible results
+        s_times = [s for s, cells in zip(ship_times, total_cells) if cells == uc and s > 0]
+        c_times = [c for c, cells in zip(cell_times, total_cells) if cells == uc and c > 0]
+        
+        # Calculate averages, default to 0 if no successful solves
+        avg_ship.append(sum(s_times)/len(s_times) if s_times else 0)
+        avg_cell.append(sum(c_times)/len(c_times) if c_times else 0)
+
+    # Plot the lines
+    ax.plot(unique_cells, avg_cell, marker='o', linestyle='-', color='red', label='Cell-Based Model (Avg)', linewidth=2)
+    ax.plot(unique_cells, avg_ship, marker='s', linestyle='-', color='blue', label='Ship-Based Model (Avg)', linewidth=2)
+    
+    # Formatting
+    ax.set_yscale('log')
+    ax.set_xlabel('Grid Size (Total Cells)', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Average Solve Time (Seconds, Log Scale)', fontsize=12, fontweight='bold')
+    ax.set_title('Scaling Performance: Cell-Based vs. Ship-Based Models', fontsize=14, fontweight='bold')
+    
+    ax.legend(loc='upper left', framealpha=0.9, fontsize=11)
+    ax.grid(True, which="both", ls="--", alpha=0.5)
+    
+    # Save the plot
+    results_dir = Path(__file__).resolve().parent / "results"
+    out_file = results_dir / f"solver_line_comparison_{timestamp}.png"
+
+    plt.tight_layout()
+    plt.savefig(out_file, dpi=300)
+    print(f"Line graph saved at '{out_file}'")
 
 def run_evaluation(filepath, solver_choice):
     """
@@ -216,11 +257,12 @@ def run_evaluation(filepath, solver_choice):
     ship_solver = ShipModelSolver() if solver_choice in ['SHIP', 'BOTH'] else None
 
     # Data for graph
-    ids, ship_times, cell_times, categories = [], [], [], []
+    ids, ship_times, cell_times, categories, sizes = [], [], [], [], []
     
     for puzzle in puzzles:
         size = len(puzzle.row_tallies)
         num_hints = len(puzzle.hints)
+        sizes.append(size)
         diff = get_difficulty(puzzle.hints)
         ids.append(str(puzzle.id))
         categories.append(diff)
@@ -295,8 +337,11 @@ def run_evaluation(filepath, solver_choice):
         print("-" * 60)
 
     if solver_choice == 'BOTH':
-        plot_scatter_results(ids, ship_times, cell_times, categories)
-        plot_cactus_results(ship_times, cell_times)
+        run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+        plot_scatter_results(ids, ship_times, cell_times, categories, run_timestamp)
+        plot_cactus_results(ship_times, cell_times, run_timestamp)
+        plot_line_comparison(sizes, ship_times, cell_times, run_timestamp)
     else:
         print("\nSkipping plot generation (requires BOTH solvers to be run).")
 
