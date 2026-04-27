@@ -295,11 +295,13 @@ class BattleshipGUI(ctk.CTk):
 
         # Start the timer
         start_time = time.time()
-        solution = solver.solve(puzzle)
+        solve_result = solver.solve(puzzle)
         elapsed_time = time.time() - start_time
 
         # Show result on the grid
-        if solution:
+        if solve_result:
+            solution, nodes = solve_result
+
             # Handle ship model format
             if isinstance(solution, list) and len(solution) > 0 and isinstance(solution[0], dict):
                 for cand in solution:
@@ -314,7 +316,7 @@ class BattleshipGUI(ctk.CTk):
                         if solution[r][c] == 1 and (r, c) not in puzzle.hints:
                             self.cells[(r, c)].configure(text="", fg_color="#a8a8a8")
 
-            self.status_label.configure(text=f"Solved successfully via {solver_choice} in {elapsed_time:.4f} seconds!", text_color="green")
+            self.status_label.configure(text=f"Solved successfully via {solver_choice} in {elapsed_time:.4f}s (Nodes Explored: {int(nodes)})", text_color="green")
         else:
             self.status_label.configure(text=f"Puzzle is Infeasible! (Time: {elapsed_time:.4f}s)", text_color="red")
 

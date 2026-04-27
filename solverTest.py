@@ -43,9 +43,10 @@ def test_full_solver():
     
     # Load results into Board
     if result:
-        print(f"Solver found {len(result)} ships.")
+        solution, nodes = result
+        print(f"Solver found {len(solution)} ships.")
         board = BattleshipBoard(puzzle)
-        board.load_ship_model(result)
+        board.load_ship_model(solution)
         
         # 4. Display and Validate
         board.display()

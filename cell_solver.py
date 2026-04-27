@@ -207,7 +207,7 @@ class CellModelSolver:
         # Output / IIS Debug
         if model.Status == GRB.OPTIMAL:
             active_ships = self._extract_ships_from_grid(x, rows, cols)
-            return active_ships
+            return active_ships, model.NodeCount
         elif model.Status == GRB.INFEASIBLE:
             print("\nGurobi proved Infeasible. Calculaing reason...")
             model.computeIIS()

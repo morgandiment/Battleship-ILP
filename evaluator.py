@@ -198,9 +198,9 @@ def plot_cactus_results(ship_times, cell_times, cell_improv_times, timestamp):
     print(f"Cactus plot saved at '{out_file}'")
     # plt.show()
 
-def plot_line_comparison(sizes, ship_times, cell_times, timestamp):
+def plot_line_comparison(sizes, ship_times, cell_times, cell_improv_times, timestamp):
     """
-    Generates a line graph comparing Cell vs Ship models across different grid sizes.
+    Generates a line graph comparing Cell (Std) vs Cell (Improved) vs Ship models across different grid sizes.
     """
     fig, ax = plt.subplots(figsize=(10, 6))
     
@@ -208,27 +208,29 @@ def plot_line_comparison(sizes, ship_times, cell_times, timestamp):
     total_cells = [s * s for s in sizes]
     unique_cells = sorted(list(set(total_cells)))
     
-    avg_ship = []
-    avg_cell = []
+    avg_ship, avg_cell, avg_cell_improv = [], [], []
     
     for uc in unique_cells:
         # Get times for this grid size, ignoring infeasible results
         s_times = [s for s, cells in zip(ship_times, total_cells) if cells == uc and s > 0]
         c_times = [c for c, cells in zip(cell_times, total_cells) if cells == uc and c > 0]
+        c_improv_times = [cut for cut, cells in zip(cell_improv_times, total_cells) if cells == uc and cut > 0]
         
         # Calculate averages, default to 0 if no successful solves
         avg_ship.append(sum(s_times)/len(s_times) if s_times else 0)
         avg_cell.append(sum(c_times)/len(c_times) if c_times else 0)
+        avg_cell_improv.append(sum(c_improv_times)/len(c_improv_times) if c_improv_times else 0)
 
     # Plot the lines
-    ax.plot(unique_cells, avg_cell, marker='o', linestyle='-', color='red', label='Cell-Based Model (Avg)', linewidth=2)
-    ax.plot(unique_cells, avg_ship, marker='s', linestyle='-', color='blue', label='Ship-Based Model (Avg)', linewidth=2)
-    
+    ax.plot(unique_cells, avg_cell, marker='o', linestyle='-', color='red', label='Cell Model (Std)', linewidth=2)
+    ax.plot(unique_cells, avg_cell_improv, marker='s', linestyle='-', color='seagreen', label='Cell Model (Improved)', linewidth=2)
+    ax.plot(unique_cells, avg_ship, marker='^', linestyle='-', color='blue', label='Ship Model', linewidth=2)
+
     # Formatting
     ax.set_yscale('log')
     ax.set_xlabel('Grid Size (Total Cells)', fontsize=12, fontweight='bold')
     ax.set_ylabel('Average Solve Time (Seconds, Log Scale)', fontsize=12, fontweight='bold')
-    ax.set_title('Scaling Performance: Cell-Based vs. Ship-Based Models', fontsize=14, fontweight='bold')
+    ax.set_title('Scaling Performance: ILP Models by Grid Size', fontsize=14, fontweight='bold')
     
     ax.legend(loc='upper left', framealpha=0.9, fontsize=11)
     ax.grid(True, which="both", ls="--", alpha=0.5)
@@ -241,7 +243,7 @@ def plot_line_comparison(sizes, ship_times, cell_times, timestamp):
     plt.savefig(out_file, dpi=300)
     print(f"Line graph saved at '{out_file}'")
 
-def plot_cuts_comparison(sizes, cell_times, cell_cuts_times, timestamp):
+def plot_cuts_comparison(sizes, cell_times, cell_improv_times, timestamp):
     """
     Generates a grouped bar chart comparing the Cell model with and without valid inequalities.
     """
@@ -255,7 +257,7 @@ def plot_cuts_comparison(sizes, cell_times, cell_cuts_times, timestamp):
     
     for uc in unique_cells:
         c_times = [c for c, cells in zip(cell_times, total_cells) if cells == uc and c > 0]
-        cut_times = [cut for cut, cells in zip(cell_cuts_times, total_cells) if cells == uc and cut > 0]
+        cut_times = [cut for cut, cells in zip(cell_improv_times, total_cells) if cells == uc and cut > 0]
         
         avg_cell.append(sum(c_times)/len(c_times) if c_times else 0)
         avg_cuts.append(sum(cut_times)/len(cut_times) if cut_times else 0)
@@ -282,6 +284,53 @@ def plot_cuts_comparison(sizes, cell_times, cell_cuts_times, timestamp):
     plt.savefig(out_file, dpi=300)
     print(f"Improvisation comparison graph saved at '{out_file}'")
 
+def plot_node_comparison(sizes, ship_nodes, cell_nodes, cell_improv_nodes, timestamp):
+    """
+    Generates a grouped bar chart comparing Branch & Bound nodes explored.
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    total_cells = [s * s for s in sizes]
+    unique_cells = sorted(list(set(total_cells)))
+    
+    avg_ship, avg_cell, avg_cuts = [], [], []
+    
+    for uc in unique_cells:
+        # Get nodes, ignoring -1 (our flag for infeasible)
+        s_n = [n for n, cells in zip(ship_nodes, total_cells) if cells == uc and n >= 0]
+        c_n = [n for n, cells in zip(cell_nodes, total_cells) if cells == uc and n >= 0]
+        cut_n = [n for n, cells in zip(cell_improv_nodes, total_cells) if cells == uc and n >= 0]
+        
+        avg_ship.append(sum(s_n)/len(s_n) if s_n else 0)
+        avg_cell.append(sum(c_n)/len(c_n) if c_n else 0)
+        avg_cuts.append(sum(cut_n)/len(cut_n) if cut_n else 0)
+
+    x = np.arange(len(unique_cells))
+    width = 0.25
+    
+    ax.bar(x - width, avg_ship, width, label='Ship Model', color='blue', alpha=0.8)
+    ax.bar(x, avg_cell, width, label='Cell Model (Std)', color='crimson', alpha=0.8)
+    ax.bar(x + width, avg_cuts, width, label='Cell Model (Improvements)', color='seagreen', alpha=0.8)
+    
+    # Symlog allows plotting 0 on a logarithmic scale
+    # ax.set_yscale('symlog', linthresh=1.0)
+    ax.set_yscale('linear')
+
+    ax.set_ylabel('Avg Branch & Bound Nodes (Symlog Scale)', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Grid Size (Total Cells)', fontsize=12, fontweight='bold')
+    ax.set_title('Mathematical Complexity: Nodes Explored by Solver', fontsize=14, fontweight='bold')
+    ax.set_xticks(x)
+    ax.set_xticklabels(unique_cells)
+    
+    ax.legend(loc='upper left', framealpha=0.9, fontsize=11)
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    
+    results_dir = Path(__file__).resolve().parent / "results"
+    out_file = results_dir / f"solver_nodes_comparison_{timestamp}.png"
+    plt.tight_layout()
+    plt.savefig(out_file, dpi=300)
+    print(f"Nodes comparison graph saved at '{out_file}'")
+
 def run_evaluation(filepath, solver_choice):
     """
     Loads all puzzles from the file and runs them through the selected solver(s).
@@ -307,44 +356,48 @@ def run_evaluation(filepath, solver_choice):
 
     # Data for graph
     ids, ship_times, cell_times, cell_improv_times, categories, sizes = [], [], [], [], [], []
+    ship_nodes, cell_nodes, cell_improv_nodes = [], [], []
     
     for puzzle in puzzles:
         size = len(puzzle.row_tallies)
         num_hints = len(puzzle.hints)
-        sizes.append(size)
         diff = get_difficulty(puzzle.hints)
+
+        sizes.append(size)
         ids.append(str(puzzle.id))
         categories.append(diff)
 
         ship_status = cell_status = cell_improv_status = "N/A"
-        s_time = 0
-        c_time = 0
         
         # Evaluate Ship Model
         if ship_solver:
             start_time_ship = time.time()
-            res_ship = ship_solver.solve(puzzle)
+            res = ship_solver.solve(puzzle)
             ship_time = time.time() - start_time_ship
-            
-            if res_ship:
+            if res:
+                solution, nodes = res
                 ship_status = f"{ship_time:.4f}s"
                 ship_times.append(ship_time)
+                ship_nodes.append(nodes)
             else:
                 ship_status = "Infeasible"
                 ship_times.append(0)
+                ship_nodes.append(-1)
 
         # Evaluate Cell Model 
         if cell_solver:
             start_time_cell = time.time()
-            res_cell = cell_solver.solve(puzzle)
+            res = cell_solver.solve(puzzle)
             cell_time = time.time() - start_time_cell
-            
-            if res_cell:
+            if res:
+                solution, nodes = res
                 cell_status = f"{cell_time:.4f}s"
                 cell_times.append(cell_time)
+                cell_nodes.append(nodes)
             else:
                 cell_status = "Infeasible"
                 cell_times.append(0)
+                cell_nodes.append(-1)
 
         # Evaluate Improved Cell Model
         if cell_improv_solver:
@@ -352,11 +405,14 @@ def run_evaluation(filepath, solver_choice):
             res = cell_improv_solver.solve(puzzle)
             t = time.time() - start_time
             if res:
+                solution, nodes = res
                 cell_improv_status = f"{t:.4f}s"
                 cell_improv_times.append(t)
+                cell_improv_nodes.append(nodes)
             else:
                 cell_improv_status =  "Infeasible"
                 cell_improv_times.append(0)
+                cell_improv_nodes.append(-1)
                 
         # Print side-by-side comparison
         print(f"{puzzle.id:<6} | {size}x{size:<4} | {num_hints:<5} | {diff:<6} | {ship_status:<10} | {cell_status:<10} | {cell_improv_status:<10}")
@@ -408,8 +464,9 @@ def run_evaluation(filepath, solver_choice):
 
         plot_scatter_results(ids, ship_times, cell_times, categories, run_timestamp)
         plot_cactus_results(ship_times, cell_times, cell_improv_times, run_timestamp)
-        plot_line_comparison(sizes, ship_times, cell_times, run_timestamp)
+        plot_line_comparison(sizes, ship_times, cell_times, cell_improv_times, run_timestamp)
         plot_cuts_comparison(sizes, cell_times, cell_improv_times, run_timestamp)
+        plot_node_comparison(sizes, ship_nodes, cell_nodes, cell_improv_nodes, run_timestamp)
     else:
         print("\nSkipping plot generation (requires ALL solvers to be run).")
 

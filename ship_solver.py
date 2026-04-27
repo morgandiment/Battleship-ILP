@@ -154,7 +154,7 @@ class ShipModelSolver:
             for cand in candidates:
                 if y[cand['id']].X > 0.5:
                     selected_candidates.append(cand)
-            return selected_candidates
+            return selected_candidates, model.NodeCount
         else:
             print("No solution found (Infeasible).")
             # Debug line
