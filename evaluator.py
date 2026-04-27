@@ -339,7 +339,7 @@ def run_evaluation(filepath, solver_choice):
     print(f"{'ID':<6} | {'Size':<6} | {'Hints':<5} | {'Diff':<6} | {'Ship Time':<10} | {'Cell Time':<10} | {'Cell Improved':<10}")
     print("-" * 70)
     
-    # Initialize both solvers
+    # Initialize all solvers
     cell_solver = CellModelSolver(use_improv=False) if solver_choice in ['CELL', 'ALL'] else None
     cell_improv_solver = CellModelSolver(use_improv=True) if solver_choice in ['CELL_IMPROVED', 'ALL'] else None
     ship_solver = ShipModelSolver() if solver_choice in ['SHIP', 'ALL'] else None
@@ -472,7 +472,7 @@ def run_evaluation(filepath, solver_choice):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate Battleship Solitaire ILP models.")
     parser.add_argument('filepath', type=str, help="Path to the CSPLib formatted dataset (e.g., data/test.pl)")
-    parser.add_argument('--solver', type=str, choices=['CELL', 'SHIP', 'BOTH'], default='BOTH', help="Which solver to run: CELL, SHIP or BOTH (default is BOTH)")
+    parser.add_argument('--solver', type=str, choices=['CELL', 'CELL_IMPROVED', 'SHIP', 'ALL'], default='ALL', help="Which solver to run: CELL, CELL_IMPROVED, SHIP or ALL (default is ALL)")
     args = parser.parse_args()
 
     run_evaluation(args.filepath, args.solver)
