@@ -86,7 +86,7 @@ def get_difficulty(hints_dict):
     else:
         return "Hard"
 
-def plot_scatter_results(ids, ship_times, cell_times, categories, timestamp):
+def plot_scatter_results(ids, ship_times, cell_times, categories, timestamp, run_dir):
     """
     Generates a scatter plot comparing solve times across a large dataset and difficulties.
     """
@@ -134,16 +134,13 @@ def plot_scatter_results(ids, ship_times, cell_times, categories, timestamp):
     ax.legend(loc='upper left', framealpha=0.9)
     ax.grid(True, linestyle=':', alpha=0.6)
     
-    results_dir = Path(__file__).resolve().parent / "results"
-    results_dir.mkdir(parents=True, exist_ok=True)
-    out_file = results_dir / f"solver_difficulty_scatter_{timestamp}.png"
-
+    out_file = run_dir / f"solver_difficulty_scatter_{timestamp}.png"
     plt.tight_layout()
     plt.savefig(out_file, dpi=300)
-    print(f"\nScatter plot saved at '{out_file}'")
+    print(f"Scatter plot saved at '{out_file}'")
     # plt.show()
 
-def plot_cactus_results(ship_times, cell_times, cell_improv_times, timestamp):
+def plot_cactus_results(ship_times, cell_times, cell_improv_times, timestamp, run_dir):
     """
     Generates a cumulative performance (Cactus) plot.
     X-axis: Number of instances solved.
@@ -189,16 +186,13 @@ def plot_cactus_results(ship_times, cell_times, cell_improv_times, timestamp):
     ax.grid(True, linestyle='--', alpha=0.7)
     
     # Save the plot
-    results_dir = Path(__file__).resolve().parent / "results"
-    results_dir.mkdir(parents=True, exist_ok=True)
-    out_file = results_dir / f"solver_cactus_{timestamp}.png"
-
+    out_file = run_dir / f"solver_cactus_{timestamp}.png"
     plt.tight_layout()
     plt.savefig(out_file, dpi=300)
     print(f"Cactus plot saved at '{out_file}'")
     # plt.show()
 
-def plot_line_comparison(sizes, ship_times, cell_times, cell_improv_times, timestamp):
+def plot_line_comparison(sizes, ship_times, cell_times, cell_improv_times, timestamp, run_dir):
     """
     Generates a line graph comparing Cell (Std) vs Cell (Improved) vs Ship models across different grid sizes.
     """
@@ -236,14 +230,12 @@ def plot_line_comparison(sizes, ship_times, cell_times, cell_improv_times, times
     ax.grid(True, which="both", ls="--", alpha=0.5)
     
     # Save the plot
-    results_dir = Path(__file__).resolve().parent / "results"
-    out_file = results_dir / f"solver_line_comparison_{timestamp}.png"
-
+    out_file = run_dir / f"solver_line_comparison_{timestamp}.png"
     plt.tight_layout()
     plt.savefig(out_file, dpi=300)
     print(f"Line graph saved at '{out_file}'")
 
-def plot_cuts_comparison(sizes, cell_times, cell_improv_times, timestamp):
+def plot_cuts_comparison(sizes, cell_times, cell_improv_times, timestamp, run_dir):
     """
     Generates a grouped bar chart comparing the Cell model with and without valid inequalities.
     """
@@ -278,13 +270,12 @@ def plot_cuts_comparison(sizes, cell_times, cell_improv_times, timestamp):
     ax.legend(loc='upper left', framealpha=0.9, fontsize=11)
     ax.grid(axis='y', linestyle='--', alpha=0.7)
     
-    results_dir = Path(__file__).resolve().parent / "results"
-    out_file = results_dir / f"solver_cuts_comparison_{timestamp}.png"
+    out_file = run_dir / f"solver_cuts_comparison_{timestamp}.png"
     plt.tight_layout()
     plt.savefig(out_file, dpi=300)
     print(f"Improvisation comparison graph saved at '{out_file}'")
 
-def plot_node_comparison(sizes, ship_nodes, cell_nodes, cell_improv_nodes, timestamp):
+def plot_node_comparison(sizes, ship_nodes, cell_nodes, cell_improv_nodes, timestamp, run_dir):
     """
     Generates a grouped bar chart comparing Branch & Bound nodes explored.
     """
@@ -325,8 +316,7 @@ def plot_node_comparison(sizes, ship_nodes, cell_nodes, cell_improv_nodes, times
     ax.legend(loc='upper left', framealpha=0.9, fontsize=11)
     ax.grid(axis='y', linestyle='--', alpha=0.7)
     
-    results_dir = Path(__file__).resolve().parent / "results"
-    out_file = results_dir / f"solver_nodes_comparison_{timestamp}.png"
+    out_file = run_dir / f"solver_nodes_comparison_{timestamp}.png"
     plt.tight_layout()
     plt.savefig(out_file, dpi=300)
     print(f"Nodes comparison graph saved at '{out_file}'")
@@ -460,13 +450,22 @@ def run_evaluation(filepath, solver_choice):
         print("-" * 75)
 
     if solver_choice == 'ALL':
+        # Fetching timestamp for graph filenames
         run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        plot_scatter_results(ids, ship_times, cell_times, categories, run_timestamp)
-        plot_cactus_results(ship_times, cell_times, cell_improv_times, run_timestamp)
-        plot_line_comparison(sizes, ship_times, cell_times, cell_improv_times, run_timestamp)
-        plot_cuts_comparison(sizes, cell_times, cell_improv_times, run_timestamp)
-        plot_node_comparison(sizes, ship_nodes, cell_nodes, cell_improv_nodes, run_timestamp)
+        # Putting results into relevant folders
+        dataset_name = Path(filepath).stem
+        run_folder_name = f"{run_timestamp}_{dataset_name}"
+        run_dir = Path(__file__).resolve().parent / "results" / run_folder_name
+        run_dir.mkdir(parents=True, exist_ok=True)
+        print(f"\nSaving generated graphs to: {run_dir}/")
+
+        # Plotting results
+        plot_scatter_results(ids, ship_times, cell_times, categories, run_timestamp, run_dir)
+        plot_cactus_results(ship_times, cell_times, cell_improv_times, run_timestamp, run_dir)
+        plot_line_comparison(sizes, ship_times, cell_times, cell_improv_times, run_timestamp, run_dir)
+        plot_cuts_comparison(sizes, cell_times, cell_improv_times, run_timestamp, run_dir)
+        plot_node_comparison(sizes, ship_nodes, cell_nodes, cell_improv_nodes, run_timestamp, run_dir)
     else:
         print("\nSkipping plot generation (requires ALL solvers to be run).")
 
