@@ -7,6 +7,7 @@ from pathlib import Path
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import numpy as np
 
 from board import BattleshipPuzzle
 from cell_solver import CellModelSolver
@@ -142,7 +143,7 @@ def plot_scatter_results(ids, ship_times, cell_times, categories, timestamp):
     print(f"\nScatter plot saved at '{out_file}'")
     # plt.show()
 
-def plot_cactus_results(ship_times, cell_times, timestamp):
+def plot_cactus_results(ship_times, cell_times, cell_improv_times, timestamp):
     """
     Generates a cumulative performance (Cactus) plot.
     X-axis: Number of instances solved.
@@ -153,22 +154,28 @@ def plot_cactus_results(ship_times, cell_times, timestamp):
     # Filter out failures
     valid_ship = [t for t in ship_times if t > 0]
     valid_cell = [t for t in cell_times if t > 0]
+    valid_cell_improv = [t for t in cell_improv_times if t > 0]
     
     # Sort times in ascending order
     valid_ship.sort()
     valid_cell.sort()
+    valid_cell_improv.sort()
     
     # X-axis
     x_ship = range(1, len(valid_ship) + 1)
     x_cell = range(1, len(valid_cell) + 1)
+    x_cell_improv = range(1, len(valid_cell_improv) + 1)
     
     # Plot the lines
     if valid_ship:
         ax.plot(x_ship, valid_ship, label='Ship Model', 
                 color='blue', linewidth=2, marker='o', markersize=4, markevery=max(1, len(valid_ship)//20))
     if valid_cell:
-        ax.plot(x_cell, valid_cell, label='Cell Model', 
+        ax.plot(x_cell, valid_cell, label='Cell Model (Standard)', 
                 color='red', linewidth=2, marker='^', markersize=4, markevery=max(1, len(valid_cell)//20))
+    if valid_cell_improv:
+        ax.plot(x_cell_improv, valid_cell_improv, label='Cell Model (Improved)', 
+                color='seagreen', linewidth=2, marker='s', markersize=4, markevery=max(1, len(valid_cell_improv)//20))
         
     # Formatting
     ax.set_xlabel('Number of Puzzles Solved', fontsize=12, fontweight='bold')
@@ -234,6 +241,47 @@ def plot_line_comparison(sizes, ship_times, cell_times, timestamp):
     plt.savefig(out_file, dpi=300)
     print(f"Line graph saved at '{out_file}'")
 
+def plot_cuts_comparison(sizes, cell_times, cell_cuts_times, timestamp):
+    """
+    Generates a grouped bar chart comparing the Cell model with and without valid inequalities.
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    total_cells = [s * s for s in sizes]
+    unique_cells = sorted(list(set(total_cells)))
+    
+    avg_cell = []
+    avg_cuts = []
+    
+    for uc in unique_cells:
+        c_times = [c for c, cells in zip(cell_times, total_cells) if cells == uc and c > 0]
+        cut_times = [cut for cut, cells in zip(cell_cuts_times, total_cells) if cells == uc and cut > 0]
+        
+        avg_cell.append(sum(c_times)/len(c_times) if c_times else 0)
+        avg_cuts.append(sum(cut_times)/len(cut_times) if cut_times else 0)
+
+    x = np.arange(len(unique_cells))
+    width = 0.35
+    
+    # Plotting the bars side-by-side
+    ax.bar(x - width/2, avg_cell, width, label='Cell Model (Standard)', color='crimson', alpha=0.8)
+    ax.bar(x + width/2, avg_cuts, width, label='Cell Model (With Improvisations)', color='seagreen', alpha=0.8)
+    
+    ax.set_ylabel('Average Solve Time (Seconds)', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Grid Size (Total Cells)', fontsize=12, fontweight='bold')
+    ax.set_title('Impact of Valid Inequalities on Cell Model Performance', fontsize=14, fontweight='bold')
+    ax.set_xticks(x)
+    ax.set_xticklabels(unique_cells)
+    
+    ax.legend(loc='upper left', framealpha=0.9, fontsize=11)
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    
+    results_dir = Path(__file__).resolve().parent / "results"
+    out_file = results_dir / f"solver_cuts_comparison_{timestamp}.png"
+    plt.tight_layout()
+    plt.savefig(out_file, dpi=300)
+    print(f"Improvisation comparison graph saved at '{out_file}'")
+
 def run_evaluation(filepath, solver_choice):
     """
     Loads all puzzles from the file and runs them through the selected solver(s).
@@ -249,15 +297,16 @@ def run_evaluation(filepath, solver_choice):
     print(f"Found {len(puzzles)} puzzles. Starting evaluation...\n")
     
     # Updated Table Header
-    print(f"{'ID':<6} | {'Size':<6} | {'Hints':<5} | {'Diff':<6} | {'Ship Time':<12} | {'Cell Time':<12}")
-    print("-" * 60)
+    print(f"{'ID':<6} | {'Size':<6} | {'Hints':<5} | {'Diff':<6} | {'Ship Time':<10} | {'Cell Time':<10} | {'Cell Improved':<10}")
+    print("-" * 70)
     
     # Initialize both solvers
-    cell_solver = CellModelSolver() if solver_choice in ['CELL', 'BOTH'] else None
-    ship_solver = ShipModelSolver() if solver_choice in ['SHIP', 'BOTH'] else None
+    cell_solver = CellModelSolver(use_improv=False) if solver_choice in ['CELL', 'ALL'] else None
+    cell_improv_solver = CellModelSolver(use_improv=True) if solver_choice in ['CELL_IMPROVED', 'ALL'] else None
+    ship_solver = ShipModelSolver() if solver_choice in ['SHIP', 'ALL'] else None
 
     # Data for graph
-    ids, ship_times, cell_times, categories, sizes = [], [], [], [], []
+    ids, ship_times, cell_times, cell_improv_times, categories, sizes = [], [], [], [], [], []
     
     for puzzle in puzzles:
         size = len(puzzle.row_tallies)
@@ -267,8 +316,7 @@ def run_evaluation(filepath, solver_choice):
         ids.append(str(puzzle.id))
         categories.append(diff)
 
-        ship_status = "N/A"
-        cell_status = "N/A"
+        ship_status = cell_status = cell_improv_status = "N/A"
         s_time = 0
         c_time = 0
         
@@ -297,53 +345,73 @@ def run_evaluation(filepath, solver_choice):
             else:
                 cell_status = "Infeasible"
                 cell_times.append(0)
+
+        # Evaluate Improved Cell Model
+        if cell_improv_solver:
+            start_time = time.time()
+            res = cell_improv_solver.solve(puzzle)
+            t = time.time() - start_time
+            if res:
+                cell_improv_status = f"{t:.4f}s"
+                cell_improv_times.append(t)
+            else:
+                cell_improv_status =  "Infeasible"
+                cell_improv_times.append(0)
                 
         # Print side-by-side comparison
-        print(f"{puzzle.id:<6} | {size}x{size:<4} | {num_hints:<5} | {diff:<6} | {ship_status:<12} | {cell_status:<12}")
+        print(f"{puzzle.id:<6} | {size}x{size:<4} | {num_hints:<5} | {diff:<6} | {ship_status:<10} | {cell_status:<10} | {cell_improv_status:<10}")
 
     # Results summary
-    print("\n" + "="*60)
+    print("\n" + "="*75)
     print(f"EVALUATION SUMMARY BY DIFFICULTY ({solver_choice})".center(60))
-    print("="*60)
+    print("="*75)
     
     for diff_level in ['Easy', 'Medium', 'Hard']:
         # Filter metrics for this specific difficulty
         d_ships = [s for s, cat in zip(ship_times, categories) if s > 0 and cat == diff_level]
         d_cells = [c for c, cat in zip(cell_times, categories) if c > 0 and cat == diff_level]
+        d_cell_improv = [cut for cut, cat in zip(cell_improv_times, categories) if cut > 0 and cat == diff_level]
         
         count_ships = len(d_ships)
         count_cells = len(d_cells)
+        count_cell_improv = len(d_cell_improv)
 
-        if count_ships == 0 and count_cells == 0:
+        if count_ships == 0 and count_cells == 0 and count_cell_improv == 0:
             continue
 
-        print(f"{diff_level.upper()}".center(60)) 
+        print(f"{diff_level.upper()}".center(75)) 
 
-        if solver_choice in ['SHIP', 'BOTH'] and count_ships > 0:
+        if solver_choice in ['SHIP', 'ALL'] and count_ships > 0:
             ship_avg = sum(d_ships) / count_ships
             print(f"  Ship Model -> Solved: {count_ships} | Avg Time: {ship_avg:.4f}s")
 
-        if solver_choice in ['CELL', 'BOTH'] and count_cells > 0:
+        if solver_choice in ['CELL', 'ALL'] and count_cells > 0:
             cell_avg = sum(d_cells) / count_cells
-            print(f"  Cell Model -> Solved: {count_cells} | Avg Time: {cell_avg:.4f}s")
+            print(f"  Cell Model (Std) -> Solved: {count_cells} | Avg Time: {cell_avg:.4f}s")
 
-        if solver_choice == 'BOTH' and count_ships > 0 and count_cells > 0:
-            joint_pairs =  [(s, c) for s, c, cat in zip(ship_times, cell_times, categories) if s > 0 and c > 0 and cat == diff_level]
+        if solver_choice in ['CELL_IMPROVED', 'ALL'] and count_cell_improv > 0:
+            cell_improv_avg = sum(d_cell_improv) / count_cell_improv
+            print(f"  Cell Model (Improved) -> Solved: {count_cell_improv} | Avg Time: {cell_improv_avg:.4f}s")
+
+        if solver_choice == 'ALL' and count_ships > 0 and count_cells > 0 and count_cell_improv > 0:
+            joint_pairs =  [(s, c, cut) for s, c, cut, cat in zip(ship_times, cell_times, cell_improv_times, categories) if s > 0 and c > 0 and cut > 0 and cat == diff_level]
             if joint_pairs:
-                ship_wins = sum(1 for s, c in joint_pairs if s < c)
-                cell_wins = sum(1 for s, c in joint_pairs if c < s)
-                print(f"  Win Count -> Ship: {ship_wins:<6} | Cell: {cell_wins:<6}")
+                ship_wins = sum(1 for s, c, cut in joint_pairs if s < c and s < cut)
+                cell_wins = sum(1 for s, c, cut in joint_pairs if c < s and c < cut)
+                cell_improv_wins = sum(1 for s, c, cut in joint_pairs if cut < s and cut < c)
+                print(f"  Win Count -> Ship: {ship_wins:<4} | Cell Std: {cell_wins:<4} | Cell Improved: {cell_improv_wins:<4}")
         
-        print("-" * 60)
+        print("-" * 75)
 
-    if solver_choice == 'BOTH':
+    if solver_choice == 'ALL':
         run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
         plot_scatter_results(ids, ship_times, cell_times, categories, run_timestamp)
-        plot_cactus_results(ship_times, cell_times, run_timestamp)
+        plot_cactus_results(ship_times, cell_times, cell_improv_times, run_timestamp)
         plot_line_comparison(sizes, ship_times, cell_times, run_timestamp)
+        plot_cuts_comparison(sizes, cell_times, cell_improv_times, run_timestamp)
     else:
-        print("\nSkipping plot generation (requires BOTH solvers to be run).")
+        print("\nSkipping plot generation (requires ALL solvers to be run).")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate Battleship Solitaire ILP models.")

@@ -55,8 +55,8 @@ class BattleshipGUI(ctk.CTk):
         load_btn = ctk.CTkButton(control_frame, text="Load .pl Dataset", command=self.load_file)
         load_btn.pack(side="left", padx=10)
 
-        self.solver_var = ctk.StringVar(value="BOTH")
-        solver_menu = ctk.CTkOptionMenu(control_frame, variable=self.solver_var, values=["BOTH", "SHIP", "CELL"])
+        self.solver_var = ctk.StringVar(value="ALL")
+        solver_menu = ctk.CTkOptionMenu(control_frame, variable=self.solver_var, values=["ALL", "SHIP", "CELL", "CELL_IMPROVED"])
         solver_menu.pack(side="left", padx=10)
 
         run_btn = ctk.CTkButton(control_frame, text="Run Evaluation", fg_color="green", hover_color="darkgreen", command=self.run_evaluation)
@@ -109,7 +109,7 @@ class BattleshipGUI(ctk.CTk):
         self.puzzle_input.pack(side="left", padx=5)
 
         self.single_solver_var = ctk.StringVar(value="SHIP")
-        single_solver_menu = ctk.CTkOptionMenu(control_frame, variable=self.single_solver_var, values=["SHIP", "CELL"], width=90)
+        single_solver_menu = ctk.CTkOptionMenu(control_frame, variable=self.single_solver_var, values=["SHIP", "CELL", "CELL_IMPROVED"], width=95)
         single_solver_menu.pack(side="right", padx=5)
 
         solve_btn = ctk.CTkButton(control_frame, text="Solve", command=self.solve_single)
@@ -288,8 +288,10 @@ class BattleshipGUI(ctk.CTk):
         solver_choice = self.single_solver_var.get()
         if solver_choice == "SHIP":
             solver = ShipModelSolver(verbose=False)
+        elif solver_choice == "CELL_IMPROVED":
+            solver = CellModelSolver(use_improv=True)
         else:
-            solver = CellModelSolver()
+            solver = CellModelSolver(use_improv=False)
 
         # Start the timer
         start_time = time.time()
