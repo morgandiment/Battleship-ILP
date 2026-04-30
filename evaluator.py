@@ -9,9 +9,9 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-from board import BattleshipPuzzle
-from cell_solver import CellModelSolver
-from ship_solver import ShipModelSolver 
+from src.board import BattleshipPuzzle
+from src.cell_solver import CellModelSolver
+from src.ship_solver import ShipModelSolver 
 
 # Mapping CSPLib Prolog symbols to 7 Solver Constants
 HINT_MAP = {

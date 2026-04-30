@@ -7,9 +7,9 @@ import os
 import re
 
 from evaluator import run_evaluation, HINT_MAP
-from ship_solver import ShipModelSolver
-from cell_solver import CellModelSolver
-from board import BattleshipPuzzle
+from src.ship_solver import ShipModelSolver
+from src.cell_solver import CellModelSolver
+from src.board import BattleshipPuzzle
 
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
