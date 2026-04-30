@@ -1,4 +1,25 @@
 import random
+import math
+
+def generate_dynamic_fleet(size):
+    """
+    Dynamically scales the fleet based on grid area to maintain ~20% density.
+    Base fleet (10x10): 1x4, 2x3, 3x2, 4x1 (Total segments = 20)
+    """
+    base_area = 100
+    current_area = size * size
+    
+    # Calculate a scaling multiplier
+    multiplier = math.ceil(current_area / base_area)
+    
+    # Scale the standard CSPLib Battleship fleet
+    fleet = {
+        4: 1 * multiplier, # Battleships
+        3: 2 * multiplier, # Cruisers
+        2: 3 * multiplier, # Destroyers
+        1: 4 * multiplier  # Submarines
+    }
+    return fleet
 
 def generate_valid_board(size, fleet):
     """
@@ -69,7 +90,10 @@ def format_as_prolog(id_num, size, fleet, grid, num_hints=5):
     rev_map = {0: 'w', 1: 'c', 2: 'm', 3: 'l', 4: 'r', 5: 't', 6: 'b'}
     
     all_coords = [(r, c) for r in range(size) for c in range(size)]
-    hint_coords = random.sample(all_coords, num_hints)
+    
+    # Prevent hint number being larger than total cells.
+    actual_hints = min(num_hints, size * size)
+    hint_coords = random.sample(all_coords, actual_hints)
     
     hints_list = []
     for r, c in hint_coords:
@@ -86,38 +110,82 @@ def format_as_prolog(id_num, size, fleet, grid, num_hints=5):
     
     return f"problem({id_num},\n    [{fleet_str}],\n    [{row_str}],\n    [{col_str}],\n    [{hint_str}])."
 
-def generate_dataset(filename):
-    configs = [
-        # Medium/Hard Puzzles
-        {"size": 6,  "hints": 3, "count": 10, "fleet": {3: 1, 2: 2, 1: 3}},
-        {"size": 8,  "hints": 4, "count": 10, "fleet": {4: 1, 3: 2, 2: 3, 1: 4}},
-        {"size": 10, "hints": 5, "count": 10, "fleet": {5: 1, 4: 1, 3: 2, 2: 3, 1: 4}},
-        {"size": 12, "hints": 6, "count": 10, "fleet": {5: 1, 4: 2, 3: 3, 2: 4, 1: 5}},
-        {"size": 15, "hints": 8, "count": 10, "fleet": {6: 1, 5: 2, 4: 3, 3: 4, 2: 5, 1: 6}},
-
-        # Hardest Puzzles
-        {"size": 10, "hints": 2, "count": 5, "fleet": {5: 1, 4: 1, 3: 2, 2: 3, 1: 4}},
-        {"size": 10, "hints": 0, "count": 5, "fleet": {5: 1, 4: 1, 3: 2, 2: 3, 1: 4}},
-        {"size": 12, "hints": 2, "count": 5, "fleet": {5: 1, 4: 2, 3: 3, 2: 4, 1: 5}},
-        {"size": 12, "hints": 0, "count": 5, "fleet": {5: 1, 4: 2, 3: 3, 2: 4, 1: 5}},
-        {"size": 15, "hints": 2, "count": 5, "fleet": {6: 1, 5: 2, 4: 3, 3: 4, 2: 5, 1: 6}},
-        {"size": 15, "hints": 0, "count": 5, "fleet": {6: 1, 5: 2, 4: 3, 3: 4, 2: 5, 1: 6}} 
-    ]
+def generate_dataset(filename, dynamic=False):
+    """
+    Generates a dataset of Battleship puzzles.
     
-    with open(filename, 'w') as f:
-        id_counter = 1
-        for config in configs:
-            print(f"Generating {config['size']}x{config['size']} with {config['hints']} hints...")
-            successes = 0
-            while successes < config['count']:
-                grid = generate_valid_board(config['size'], config['fleet'])
-                if grid:
-                    prolog_str = format_as_prolog(id_counter, config['size'], config['fleet'], grid, config['hints'])
-                    f.write(prolog_str + "\n")
-                    id_counter += 1
-                    successes += 1
-                    
-    print(f"\nSuccessfully generated {id_counter - 1} scalable puzzles into '{filename}'!")
+    Args:
+        filename: Output file path
+        dynamic: If True, uses dynamically scaled fleets based on grid size.
+                If False, uses fixed static fleet configurations.
+    """
+    if dynamic:
+        # Dynamic mode: scales fleets based on grid area
+        grid_sizes = [10, 15, 20, 25, 30]
+        hint_counts = [0, 2, 4, 6, 8, 10]
+        instances_per_config = 5
+        
+        with open(filename, 'w') as f:
+            id_counter = 1
+            for size in grid_sizes:
+                fleet = generate_dynamic_fleet(size)
+                for hints in hint_counts:
+                    print(f"Generating {size}x{size} grid with {hints} hints...")
+                    successes = 0
+                    while successes < instances_per_config:
+                        grid = generate_valid_board(size, fleet)
+                        if grid: # Ensure the generator didn't get stuck
+                            prolog_str = format_as_prolog(id_counter, size, fleet, grid, hints)
+                            f.write(prolog_str + "\n")
+                            id_counter += 1
+                            successes += 1
+        
+        print(f"\nSuccessfully generated {id_counter - 1} scalable puzzles into '{filename}'!")
+    
+    else:
+        # Static mode: uses fixed fleet configurations
+        configs = [
+            # Medium/Hard Puzzles
+            {"size": 6,  "hints": 3, "count": 10, "fleet": {3: 1, 2: 2, 1: 3}},
+            {"size": 8,  "hints": 4, "count": 10, "fleet": {4: 1, 3: 2, 2: 3, 1: 4}},
+            {"size": 10, "hints": 5, "count": 10, "fleet": {5: 1, 4: 1, 3: 2, 2: 3, 1: 4}},
+            {"size": 12, "hints": 6, "count": 10, "fleet": {5: 1, 4: 2, 3: 3, 2: 4, 1: 5}},
+            {"size": 15, "hints": 8, "count": 10, "fleet": {6: 1, 5: 2, 4: 3, 3: 4, 2: 5, 1: 6}},
+
+            # Hardest Puzzles
+            {"size": 10, "hints": 2, "count": 5, "fleet": {5: 1, 4: 1, 3: 2, 2: 3, 1: 4}},
+            {"size": 10, "hints": 0, "count": 5, "fleet": {5: 1, 4: 1, 3: 2, 2: 3, 1: 4}},
+            {"size": 12, "hints": 2, "count": 5, "fleet": {5: 1, 4: 2, 3: 3, 2: 4, 1: 5}},
+            {"size": 12, "hints": 0, "count": 5, "fleet": {5: 1, 4: 2, 3: 3, 2: 4, 1: 5}},
+            {"size": 15, "hints": 2, "count": 5, "fleet": {6: 1, 5: 2, 4: 3, 3: 4, 2: 5, 1: 6}},
+            {"size": 15, "hints": 0, "count": 5, "fleet": {6: 1, 5: 2, 4: 3, 3: 4, 2: 5, 1: 6}} 
+        ]
+        
+        with open(filename, 'w') as f:
+            id_counter = 1
+            for config in configs:
+                print(f"Generating {config['size']}x{config['size']} with {config['hints']} hints...")
+                successes = 0
+                while successes < config['count']:
+                    grid = generate_valid_board(config['size'], config['fleet'])
+                    if grid:
+                        prolog_str = format_as_prolog(id_counter, config['size'], config['fleet'], grid, config['hints'])
+                        f.write(prolog_str + "\n")
+                        id_counter += 1
+                        successes += 1
+                        
+        print(f"\nSuccessfully generated {id_counter - 1} scalable puzzles into '{filename}'!")
 
 if __name__ == "__main__":
-    generate_dataset("data/scalable_puzzles.txt")
+    import sys
+    filename = "data/scalable_puzzles.txt"
+    
+    # Check for --dynamic flag (default is STATIC)
+    use_dynamic = "--dynamic" in sys.argv
+    
+    if use_dynamic:
+        print("Running in DYNAMIC mode (scaled fleets based on grid size)")
+        generate_dataset(filename, dynamic=True)
+    else:
+        print("Running in STATIC mode (fixed fleet configurations)")
+        generate_dataset(filename, dynamic=False)
