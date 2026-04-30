@@ -86,3 +86,7 @@ Battleship-ILP/
 ├── requirements.txt         # Python dependency list
 └── README.md                # Project documentation
 ```
+
+---
+## Author
+This project was created by Morgan Diment for the CM3203 Individual Project final-year module at Cardiff University. For the full report, see the [dissertation report repository](https://github.com/morgandiment/dissertation-report).
