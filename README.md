@@ -64,6 +64,14 @@ Generate a static dataset or run with the `--dynamic` flag to generate a dynamic
 python generator.py
 ```
 
+### 4. Code Quality
+This repository uses Black for formatting, Flake8 for linting, and pre-commit to run both before commits.
+```bash
+pip install -r requirements.txt
+pre-commit install
+pre-commit run --all-files
+```
+
 ## Project Structure
 ```text
 Battleship-ILP/
@@ -74,7 +82,7 @@ Battleship-ILP/
 │   ├── ship_solver.py       # Sparse-matrix Set Packing ILP formulation
 │   └── solver_utils.py      # Shared logic and grid formatting utilities
 ├── tests/                   # Automated unit tests
-    ├── __init__.py          # Package initializer
+│   ├── __init__.py          # Package initializer
 │   ├── test_board.py         # Validation for parsing and data extraction
 │   └── test_solver.py        # Correctness validation for both ILP models
 ├── data/                    # Benchmark datasets

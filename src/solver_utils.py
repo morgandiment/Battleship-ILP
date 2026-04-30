@@ -13,14 +13,16 @@ def generate_ship_candidates(size, fleet_spec):
             for c in range(size - length + 1):
                 # Valid horizontal ship from (r, c) to (r, c+length-1)
                 cells = [(r, c + k) for k in range(length)]
-                candidates.append({
-                    'id': candidate_id,
-                    'length': length,
-                    'orientation': 'H',
-                    'row': r,
-                    'col': c,
-                    'cells': cells
-                })
+                candidates.append(
+                    {
+                        "id": candidate_id,
+                        "length": length,
+                        "orientation": "H",
+                        "row": r,
+                        "col": c,
+                        "cells": cells,
+                    }
+                )
                 candidate_id += 1
 
         # Vertical
@@ -30,17 +32,20 @@ def generate_ship_candidates(size, fleet_spec):
                 for r in range(size - length + 1):
                     # Valid vertical ship from (r, c) to (r+length-1, c)
                     cells = [(r + k, c) for k in range(length)]
-                    candidates.append({
-                        'id': candidate_id,
-                        'length': length,
-                        'orientation': 'V',
-                        'row': r,
-                        'col': c,
-                        'cells': cells
-                    })
+                    candidates.append(
+                        {
+                            "id": candidate_id,
+                            "length": length,
+                            "orientation": "V",
+                            "row": r,
+                            "col": c,
+                            "cells": cells,
+                        }
+                    )
                     candidate_id += 1
 
     return candidates
+
 
 # Quick test with a standard fleet
 if __name__ == "__main__":

@@ -11,10 +11,12 @@ RIGHT = 4
 TOP = 5
 BOTTOM = 6
 
+
 class CellModelSolver:
     """
     Implements Cell-Based Model from Meuffels' paper.
     """
+
     def __init__(self, use_improv=False):
         self.use_improv = use_improv
         self.env = gp.Env(empty=True)
@@ -36,35 +38,35 @@ class CellModelSolver:
 
         # 1. One state per cell
         model.addConstrs(
-            (x.sum(r, c, '*') == 1 for r in range(rows) for c in range(cols)),
-            name="UniqueState"
+            (x.sum(r, c, "*") == 1 for r in range(rows) for c in range(cols)),
+            name="UniqueState",
         )
 
         # 2. Row/Col tally sum
         for r in range(rows):
             model.addConstr(
-                gp.quicksum(x[r,c,k] for c in range(cols) for k in range(1, 7)) == puzzle.row_tallies[r],
-                name=f"Row_{r}"
+                gp.quicksum(x[r, c, k] for c in range(cols) for k in range(1, 7)) == puzzle.row_tallies[r],
+                name=f"Row_{r}",
             )
         for c in range(cols):
             model.addConstr(
-                gp.quicksum(x[r,c,k] for r in range(rows) for k in range(1,7)) == puzzle.col_tallies[c],
-                name=f"Col_{c}"
+                gp.quicksum(x[r, c, k] for r in range(rows) for k in range(1, 7)) == puzzle.col_tallies[c],
+                name=f"Col_{c}",
             )
-        
+
         # 3. Fleet inventory
         total_ships_expected = sum(puzzle.fleet_spec.values())
-        
+
         model.addConstr(
-            x.sum('*', '*', SUB) + x.sum('*', '*', LEFT) + x.sum('*', '*', TOP) == total_ships_expected,
-            name="TotalFleetCount"
+            x.sum("*", "*", SUB) + x.sum("*", "*", LEFT) + x.sum("*", "*", TOP) == total_ships_expected,
+            name="TotalFleetCount",
         )
 
         # 4. Pattern Matching
         for length, expected_count in puzzle.fleet_spec.items():
             length = int(length)
-            if length == 1: 
-                model.addConstr(x.sum('*', '*', SUB) == expected_count, "Count_Subs") 
+            if length == 1:
+                model.addConstr(x.sum("*", "*", SUB) == expected_count, "Count_Subs")
                 continue
 
             detectors = []
@@ -83,7 +85,10 @@ class CellModelSolver:
                     # Safe loop to avoid index typos
                     for p in pieces:
                         model.addConstr(is_ship <= p, name=f"HBind1_{length}_{r}_{c}")
-                    model.addConstr(is_ship >= gp.quicksum(pieces) - length + 1, name=f"HBind2_{length}_{r}_{c}")
+                    model.addConstr(
+                        is_ship >= gp.quicksum(pieces) - length + 1,
+                        name=f"HBind2_{length}_{r}_{c}",
+                    )
 
             # Verticals
             for c in range(cols):
@@ -99,7 +104,10 @@ class CellModelSolver:
                     # Safe loop
                     for p in pieces:
                         model.addConstr(is_ship <= p, name=f"VBind1_{length}_{r}_{c}")
-                    model.addConstr(is_ship >= gp.quicksum(pieces) - length + 1, name=f"VBind2_{length}_{r}_{c}")
+                    model.addConstr(
+                        is_ship >= gp.quicksum(pieces) - length + 1,
+                        name=f"VBind2_{length}_{r}_{c}",
+                    )
 
             # Exact count
             model.addConstr(gp.quicksum(detectors) == expected_count, name=f"Count_Len{length}")
@@ -109,98 +117,103 @@ class CellModelSolver:
             for c in range(cols):
                 # Left
                 if c < cols - 1:
-                    model.addConstr(x[r,c,LEFT] <= x[r,c+1,MID] + x[r,c+1,RIGHT])
+                    model.addConstr(x[r, c, LEFT] <= x[r, c + 1, MID] + x[r, c + 1, RIGHT])
                 else:
-                    model.addConstr(x[r,c,LEFT] == 0) # Not at edge
+                    model.addConstr(x[r, c, LEFT] == 0)  # Not at edge
 
                 # Right
                 if c > 0:
-                    model.addConstr(x[r,c,RIGHT] <= x[r,c-1,MID] + x[r,c-1,LEFT])
+                    model.addConstr(x[r, c, RIGHT] <= x[r, c - 1, MID] + x[r, c - 1, LEFT])
                 else:
-                    model.addConstr(x[r,c,RIGHT] == 0)
+                    model.addConstr(x[r, c, RIGHT] == 0)
 
                 # Top
                 if r < rows - 1:
-                    model.addConstr(x[r,c,TOP] <= x[r+1,c,MID] + x[r+1,c,BOTTOM])
+                    model.addConstr(x[r, c, TOP] <= x[r + 1, c, MID] + x[r + 1, c, BOTTOM])
                 else:
-                    model.addConstr(x[r,c,TOP] == 0)
+                    model.addConstr(x[r, c, TOP] == 0)
 
                 # Bottom
                 if r > 0:
-                    model.addConstr(x[r,c,BOTTOM] <= x[r-1,c,MID] + x[r-1,c,TOP])
+                    model.addConstr(x[r, c, BOTTOM] <= x[r - 1, c, MID] + x[r - 1, c, TOP])
                 else:
-                    model.addConstr(x[r,c,BOTTOM] == 0)
-
+                    model.addConstr(x[r, c, BOTTOM] == 0)
 
             # 6. Linearised Degree Contsraints (prevents ship overlapping)
             for r in range(rows):
                 for c in range(cols):
                     neighbors = []
-                    for dr, dc in [(0,1), (0,-1), (1,0), (-1,0)]:
-                        nr, nc = r+dr, c+dc
+                    for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                        nr, nc = r + dr, c + dc
                         if 0 <= nr < rows and 0 <= nc < cols:
-                            neighbors.append(1 - x[nr,nc,WATER])
-                    
+                            neighbors.append(1 - x[nr, nc, WATER])
+
                     if neighbors:
                         n_count = gp.quicksum(neighbors)
                         # SUB: 0 neighbors
-                        model.addConstr(n_count <= 4 * (1 - x[r,c,SUB]))
+                        model.addConstr(n_count <= 4 * (1 - x[r, c, SUB]))
                         # ENDS: exactly 1 neighbor
-                        ends = x[r,c,LEFT] + x[r,c,RIGHT] + x[r,c,TOP] + x[r,c,BOTTOM]
+                        ends = x[r, c, LEFT] + x[r, c, RIGHT] + x[r, c, TOP] + x[r, c, BOTTOM]
                         model.addConstr(n_count <= 1 + 3 * (1 - ends))
                         model.addConstr(n_count >= 1 - 1 * (1 - ends))
                         # MID: exactly 2 neighbors
-                        model.addConstr(n_count <= 2 + 2 * (1 - x[r,c,MID]))
-                        model.addConstr(n_count >= 2 - 2 * (1 - x[r,c,MID]))
+                        model.addConstr(n_count <= 2 + 2 * (1 - x[r, c, MID]))
+                        model.addConstr(n_count >= 2 - 2 * (1 - x[r, c, MID]))
 
         # 7. Diagonal Constraints
         for r in range(rows - 1):
             for c in range(cols - 1):
-                is_ship_A = gp.quicksum(x[r,c,k] for k in range(1,7))
-                is_ship_B = gp.quicksum(x[r+1,c+1,k] for k in range(1,7))
+                is_ship_A = gp.quicksum(x[r, c, k] for k in range(1, 7))
+                is_ship_B = gp.quicksum(x[r + 1, c + 1, k] for k in range(1, 7))
                 model.addConstr(is_ship_A + is_ship_B <= 1)
 
-                is_ship_C = gp.quicksum(x[r,c+1,k] for k in range(1,7))
-                is_ship_D = gp.quicksum(x[r+1,c,k] for k in range(1,7))
+                is_ship_C = gp.quicksum(x[r, c + 1, k] for k in range(1, 7))
+                is_ship_D = gp.quicksum(x[r + 1, c, k] for k in range(1, 7))
                 model.addConstr(is_ship_C + is_ship_D <= 1)
 
         # IMPROVISATIONS (A-D)
         if self.use_improv:
             # A. Global parity (LR and TB piece nums must match)
-            model.addConstr(x.sum('*', '*', LEFT) == x.sum('*', '*', RIGHT), name="Global_LR_Parity")
-            model.addConstr(x.sum('*', '*', TOP) == x.sum('*', '*', BOTTOM), name="Global_TB_Parity")
+            model.addConstr(x.sum("*", "*", LEFT) == x.sum("*", "*", RIGHT), name="Global_LR_Parity")
+            model.addConstr(x.sum("*", "*", TOP) == x.sum("*", "*", BOTTOM), name="Global_TB_Parity")
 
             # B. Line-specific parity (Num of LR/TB pieces in a line/column must match)
             for r in range(rows):
-                model.addConstr(x.sum(r, '*', LEFT) == x.sum(r, '*', RIGHT), name=f"Row_LR_Parity_{r}")
+                model.addConstr(
+                    x.sum(r, "*", LEFT) == x.sum(r, "*", RIGHT),
+                    name=f"Row_LR_Parity_{r}",
+                )
             for c in range(cols):
-                model.addConstr(x.sum('*', c, TOP) == x.sum('*', c, BOTTOM), name=f"Col_TB_Parity_{c}")
+                model.addConstr(
+                    x.sum("*", c, TOP) == x.sum("*", c, BOTTOM),
+                    name=f"Col_TB_Parity_{c}",
+                )
 
             # C. Tally-based impossibilities (if tally is 1, can't be LRTB end piece)
             for r in range(rows):
                 if puzzle.row_tallies[r] == 1:
                     for c in range(cols):
-                        model.addConstr(x[r,c,LEFT] == 0, name=f"TallyImpL_{r}_{c}")
-                        model.addConstr(x[r,c,RIGHT] == 0, name=f"TallyImpR_{r}_{c}")
+                        model.addConstr(x[r, c, LEFT] == 0, name=f"TallyImpL_{r}_{c}")
+                        model.addConstr(x[r, c, RIGHT] == 0, name=f"TallyImpR_{r}_{c}")
             for c in range(cols):
                 if puzzle.col_tallies[c] == 1:
                     for r in range(rows):
-                        model.addConstr(x[r,c,TOP] == 0, name=f"TallyImpT_{r}_{c}")
-                        model.addConstr(x[r,c,BOTTOM] == 0, name=f"TallyImpB_{r}_{c}")
+                        model.addConstr(x[r, c, TOP] == 0, name=f"TallyImpT_{r}_{c}")
+                        model.addConstr(x[r, c, BOTTOM] == 0, name=f"TallyImpB_{r}_{c}")
 
             # D. Corner banning (can't be middle piece)
-            corners = [(0,0), (0, cols-1), (rows-1, 0), (rows-1, cols-1)]
+            corners = [(0, 0), (0, cols - 1), (rows - 1, 0), (rows - 1, cols - 1)]
             for r_corn, c_corn in corners:
                 model.addConstr(x[r_corn, c_corn, MID] == 0, name=f"NoMidCorner_{r_corn}_{c_corn}")
 
         # 8. Hints (Dealing with front/back)
-        if hasattr(puzzle, 'hints') and puzzle.hints:
+        if hasattr(puzzle, "hints") and puzzle.hints:
             for (r, c), val in puzzle.hints.items():
                 if val == WATER:
-                    model.addConstr(x[r,c,WATER] == 1, name=f"Hint_W_{r}_{c}")
+                    model.addConstr(x[r, c, WATER] == 1, name=f"Hint_W_{r}_{c}")
                 elif val in [SUB, MID, LEFT, RIGHT, TOP, BOTTOM]:
                     # Force the exact shape variable to be 1
-                    model.addConstr(x[r,c,val] == 1, name=f"Hint_Shape_{r}_{c}")
+                    model.addConstr(x[r, c, val] == 1, name=f"Hint_Shape_{r}_{c}")
 
         model.optimize()
 
@@ -218,39 +231,36 @@ class CellModelSolver:
             return None
         else:
             return None
-        
+
     def _extract_ships_from_grid(self, x_vars, rows, cols):
         """
         Parses 7 variable grid to find connected ships and lengths.
         """
         # Temp 0/1 grid
-        grid = np.zeros((rows,cols), dtype=int)
+        grid = np.zeros((rows, cols), dtype=int)
         for r in range(rows):
             for c in range(cols):
                 if x_vars[r, c, WATER].X < 0.5:
-                    grid[r,c] = 1
-        
+                    grid[r, c] = 1
+
         # Flood fill to find ships
         ships = []
         visited = np.zeros((rows, cols), dtype=bool)
 
         for r in range(rows):
             for c in range(cols):
-                if grid[r,c] == 1 and not visited[r,c]:
+                if grid[r, c] == 1 and not visited[r, c]:
                     # Tracing ship
                     cells = []
-                    stack = [(r,c)]
-                    visited[r,c] = True
+                    stack = [(r, c)]
+                    visited[r, c] = True
                     while stack:
                         curr_r, curr_c = stack.pop()
                         cells.append((curr_r, curr_c))
-                        for dr, dc in [(0,1), (0,-1), (1,0), (-1,0)]:
-                            nr, nc = curr_r+dr, curr_c+dc
-                            if 0 <= nr < rows and 0 <= nc < cols and grid[nr,nc] == 1 and not visited[nr,nc]:
-                                visited[nr,nc] = True
+                        for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                            nr, nc = curr_r + dr, curr_c + dc
+                            if 0 <= nr < rows and 0 <= nc < cols and grid[nr, nc] == 1 and not visited[nr, nc]:
+                                visited[nr, nc] = True
                                 stack.append((nr, nc))
-                    ships.append({
-                        'length': len(cells),
-                        'cells': cells
-                     })
+                    ships.append({"length": len(cells), "cells": cells})
         return ships

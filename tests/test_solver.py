@@ -18,27 +18,23 @@ class TestSolver(unittest.TestCase):
         # Full fleet tallies with hints
         row_tallies = [1, 4, 1, 2, 6, 2, 2, 2, 3, 2]
         col_tallies = [5, 1, 5, 1, 1, 5, 0, 2, 4, 1]
-        my_hints = {
-            (1, 1): LEFT,
-            (2, 5): MID,
-            (7, 3): SUB
-        }
-        
+        my_hints = {(1, 1): LEFT, (2, 5): MID, (7, 3): SUB}
+
         puzzle = BattleshipPuzzle(row_tallies, col_tallies, hints=my_hints)
-        
+
         # Run Solver
         result = solver.solve(puzzle)
-        
+
         # Validate result
         self.assertIsNotNone(result, "Solver returned infeasible result")
-        
+
         solution, nodes = result
         self.assertGreater(len(solution), 0, "Solver found no ships")
-        
+
         # Load results into Board
         board = BattleshipBoard(puzzle)
         board.load_ship_model(solution)
-        
+
         # Validate the board
         is_valid, msg = board.is_valid_solution()
         self.assertTrue(is_valid, f"Solver output is invalid: {msg}")

@@ -1,5 +1,4 @@
 import unittest
-import numpy as np
 from src.board import BattleshipPuzzle, BattleshipBoard, WATER
 
 
@@ -8,7 +7,7 @@ class TestBoard(unittest.TestCase):
         """Create a valid board for each test."""
         row_tallies = [4, 0, 3, 0, 0, 0, 0, 0, 0, 0]
         col_tallies = [1, 1, 1, 1, 0, 0, 1, 1, 1, 0]
-        
+
         puzzle = BattleshipPuzzle(row_tallies, col_tallies)
         custom_fleet = {4: 1, 3: 1}
         puzzle.fleet_spec = custom_fleet
@@ -46,7 +45,7 @@ class TestBoard(unittest.TestCase):
         # Update tally numbers to pass checks
         self.board.puzzle.row_tallies[1] += 1
         self.board.puzzle.col_tallies[4] += 1
-        
+
         is_valid, msg = self.board.is_valid_solution()
 
         # Cleanup
@@ -61,9 +60,9 @@ class TestBoard(unittest.TestCase):
         """Test that incorrect tallies are caught."""
         # Add a random ship segment that ruins the row count
         self.board.grid[9, 9] = 1
-        
+
         is_valid, msg = self.board.is_valid_solution()
-        
+
         self.assertFalse(is_valid, "Failed to catch tally error")
         self.assertIn("Tally", msg, f"Expected 'Tally' in error message, got: {msg}")
 

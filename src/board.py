@@ -4,10 +4,12 @@ import numpy as np
 UNKNOWN = -1
 WATER = 0
 
+
 class BattleshipPuzzle:
     """
     Definition of the problem.
     """
+
     def __init__(self, row_tallies, col_tallies, hints=None):
         self.row_tallies = np.array(row_tallies)
         self.col_tallies = np.array(col_tallies)
@@ -17,10 +19,12 @@ class BattleshipPuzzle:
         # Fleet length (for 10x10) then count
         self.fleet_spec = {5: 1, 4: 1, 3: 2, 2: 3, 1: 4}
 
+
 class BattleshipBoard:
     """
     State of the grid.
     """
+
     def __init__(self, puzzle: BattleshipPuzzle, size=10):
         self.puzzle = puzzle
         self.size = size
@@ -35,7 +39,7 @@ class BattleshipBoard:
     def load_cell_model(self, s_vars, t_vars):
         """
         Loads solution from adapted Cell Model.
-        
+
         :param s_vars: 10x10 matrix of 0/1
         :param t_vars: 10x10 matrix of 0-4
         """
@@ -51,20 +55,20 @@ class BattleshipBoard:
     def load_ship_model(self, active_ships):
         """
         Loads solution from Ship Model.
-        
+
         :param active_ships: List of candidate dicts from solver_utils.
         """
         self.grid.fill(WATER)
 
         for ship in active_ships:
-            length = ship['length']
+            length = ship["length"]
 
-            if 'cells' in ship:
-                for r, c in ship['cells']:
+            if "cells" in ship:
+                for r, c in ship["cells"]:
                     self.grid[r, c] = length
             else:
-                r, c = ship['row'], ship['col']
-                is_vert = (ship['orientation'] == 'V')
+                r, c = ship["row"], ship["col"]
+                is_vert = ship["orientation"] == "V"
                 for k in range(length):
                     nr = r + k if is_vert else r
                     nc = c if is_vert else c + k
@@ -87,22 +91,26 @@ class BattleshipBoard:
         for r in range(self.size - 1):
             for c in range(self.size - 1):
                 # Diagonals
-                if self.grid[r, c] > 0 and self.grid[r+1, c+1] > 0:
+                if self.grid[r, c] > 0 and self.grid[r + 1, c + 1] > 0:
                     return False, f"Diagonal Touch at {r}, {c}"
-                if self.grid[r, c+1] > 0 and self.grid[r+1, c] > 0:
+                if self.grid[r, c + 1] > 0 and self.grid[r + 1, c] > 0:
                     return False, f"Diagonal Touch at {r}, {c+1}"
-                
+
         # Check fleet
         found_ships = self._analyse_fleet()
 
         from collections import Counter
+
         counts = Counter(found_ships)
 
         if counts != self.puzzle.fleet_spec:
-            return False, f"Fleet Mismatch. Found {dict(counts)} Expected: {self.puzzle.fleet_spec}"
-        
+            return (
+                False,
+                f"Fleet Mismatch. Found {dict(counts)} Expected: {self.puzzle.fleet_spec}",
+            )
+
         return True, "Valid Solution"
-    
+
     def _analyse_fleet(self):
         """
         Uses flood fill to find ships and check if they are valid lines.
@@ -122,12 +130,14 @@ class BattleshipBoard:
                         ship_lengths.append(len(cells))
 
                     actual_len = len(cells)
-                    for (sr, sc) in cells:
+                    for sr, sc in cells:
                         if self.grid[sr, sc] != actual_len:
-                            print(f"Warning: Cell {sr}, {sc} says length {self.grid[sr, sc]} but is part of length {actual_len}")
-        
+                            print(
+                                f"Warning: Cell {sr}, {sc} says length {self.grid[sr, sc]} "
+                                f"but is part of length {actual_len}"
+                            )
+
         return ship_lengths
-    
 
     def _flood_fill(self, r, c, visited):
         """Recusrive flood fill to find connected components."""
@@ -147,23 +157,27 @@ class BattleshipBoard:
                         stack.append((nr, nc))
 
         return component
-    
+
     def _is_straight_line(self, cells):
         """Returns True if all cells are in one row or one column."""
-        if not cells: return False
+        if not cells:
+            return False
         rows = {r for r, c in cells}
         cols = {c for r, c in cells}
         return len(rows) == 1 or len(cols) == 1
-    
+
     def display(self):
         print("   " + " ".join(str(i) for i in range(self.size)))
         print("  " + "-" * (self.size * 2))
         for r in range(self.size):
             row_char = []
             for val in self.grid[r]:
-                if val == WATER: row_char.append('.')
-                elif val == UNKNOWN: row_char.append('?')
-                else: row_char.append(str(val))
+                if val == WATER:
+                    row_char.append(".")
+                elif val == UNKNOWN:
+                    row_char.append("?")
+                else:
+                    row_char.append(str(val))
 
             print(f"{r}| {' '.join(row_char)} | {self.puzzle.row_tallies[r]}")
         print("  " + "-" * (self.size * 2))

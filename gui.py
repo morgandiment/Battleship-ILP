@@ -14,6 +14,7 @@ from src.board import BattleshipPuzzle
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
+
 class TextboxRedirector:
     def __init__(self, textbox):
         self.textbox = textbox
@@ -23,10 +24,11 @@ class TextboxRedirector:
 
     def _insert_text(self, text):
         self.textbox.insert("end", text)
-        self.textbox.see("end") 
+        self.textbox.see("end")
 
     def flush(self):
         pass
+
 
 class BattleshipGUI(ctk.CTk):
     def __init__(self):
@@ -56,10 +58,20 @@ class BattleshipGUI(ctk.CTk):
         load_btn.pack(side="left", padx=10)
 
         self.solver_var = ctk.StringVar(value="ALL")
-        solver_menu = ctk.CTkOptionMenu(control_frame, variable=self.solver_var, values=["ALL", "SHIP", "CELL", "CELL_IMPROVED"])
+        solver_menu = ctk.CTkOptionMenu(
+            control_frame,
+            variable=self.solver_var,
+            values=["ALL", "SHIP", "CELL", "CELL_IMPROVED"],
+        )
         solver_menu.pack(side="left", padx=10)
 
-        run_btn = ctk.CTkButton(control_frame, text="Run Evaluation", fg_color="green", hover_color="darkgreen", command=self.run_evaluation)
+        run_btn = ctk.CTkButton(
+            control_frame,
+            text="Run Evaluation",
+            fg_color="green",
+            hover_color="darkgreen",
+            command=self.run_evaluation,
+        )
         run_btn.pack(side="right", padx=10)
 
         self.console_output = ctk.CTkTextbox(self.tab_batch, wrap="none", font=("Courier", 12))
@@ -69,8 +81,8 @@ class BattleshipGUI(ctk.CTk):
     def load_file(self):
         filepath = filedialog.askopenfilename(filetypes=[("Prolog Files", "*.pl"), ("Text Files", "*.txt")])
         if filepath:
-            self.loaded_filepath = filepath # Saving the real path
-            filename = os.path.basename(filepath) # Only show the short path
+            self.loaded_filepath = filepath  # Saving the real path
+            filename = os.path.basename(filepath)  # Only show the short path
             self.file_label.configure(text=f"Loaded: {filename}")
             self.console_output.insert("end", f"\nLoaded File: {filepath}\n")
 
@@ -105,17 +117,31 @@ class BattleshipGUI(ctk.CTk):
         self.fleet_input.pack(side="left", padx=5)
         self.fleet_input.insert(0, "4:1,3:2,2:3,1:4")
 
-        self.puzzle_input = ctk.CTkEntry(control_frame, placeholder_text="Paste CSPLib string OR draw on grid", width=450)
+        self.puzzle_input = ctk.CTkEntry(
+            control_frame,
+            placeholder_text="Paste CSPLib string OR draw on grid",
+            width=450,
+        )
         self.puzzle_input.pack(side="left", padx=5)
 
         self.single_solver_var = ctk.StringVar(value="SHIP")
-        single_solver_menu = ctk.CTkOptionMenu(control_frame, variable=self.single_solver_var, values=["SHIP", "CELL", "CELL_IMPROVED"], width=95)
+        single_solver_menu = ctk.CTkOptionMenu(
+            control_frame,
+            variable=self.single_solver_var,
+            values=["SHIP", "CELL", "CELL_IMPROVED"],
+            width=95,
+        )
         single_solver_menu.pack(side="right", padx=5)
 
         solve_btn = ctk.CTkButton(control_frame, text="Solve", command=self.solve_single)
         solve_btn.pack(side="right", padx=10)
-        
-        self.status_label = ctk.CTkLabel(self.tab_single, text="Click cells to change hints. Type tallies in the edges.", text_color="gray", font=("Arial", 14))
+
+        self.status_label = ctk.CTkLabel(
+            self.tab_single,
+            text="Click cells to change hints. Type tallies in the edges.",
+            text_color="gray",
+            font=("Arial", 14),
+        )
         self.status_label.pack(pady=5)
 
         self.grid_frame = ctk.CTkFrame(self.tab_single)
@@ -124,11 +150,11 @@ class BattleshipGUI(ctk.CTk):
         self.cells = {}
         self.row_entries = {}
         self.col_entries = {}
-        
+
         # Cell state options
         self.cell_modes = ["", "w", "c", "l", "r", "t", "b", "m"]
         self.cell_mode_idx = {(r, c): 0 for r in range(10) for c in range(10)}
-        
+
         grid_size = 10
         for r in range(grid_size + 1):
             for c in range(grid_size + 1):
@@ -136,31 +162,57 @@ class BattleshipGUI(ctk.CTk):
                     continue
                 elif r == 0:
                     # Column Tally Inputs
-                    entry = ctk.CTkEntry(self.grid_frame, width=35, height=35, font=("Arial", 14), justify="center")
+                    entry = ctk.CTkEntry(
+                        self.grid_frame,
+                        width=35,
+                        height=35,
+                        font=("Arial", 14),
+                        justify="center",
+                    )
                     entry.insert(0, "0")
                     entry.grid(row=r, column=c, padx=2, pady=2)
-                    self.col_entries[c-1] = entry
+                    self.col_entries[c - 1] = entry
                 elif c == 0:
                     # Row Tally Inputs
-                    entry = ctk.CTkEntry(self.grid_frame, width=35, height=35, font=("Arial", 14), justify="center")
+                    entry = ctk.CTkEntry(
+                        self.grid_frame,
+                        width=35,
+                        height=35,
+                        font=("Arial", 14),
+                        justify="center",
+                    )
                     entry.insert(0, "0")
                     entry.grid(row=r, column=c, padx=2, pady=2)
-                    self.row_entries[r-1] = entry
+                    self.row_entries[r - 1] = entry
                 else:
                     # Clickable Grid Cells
-                    btn = ctk.CTkButton(self.grid_frame, text="", width=35, height=35, corner_radius=2,
-                                        fg_color="#1f538d", border_width=1, border_color="#14375e",
-                                        command=lambda rr=r-1, cc=c-1: self.on_cell_click(rr, cc))
+                    btn = ctk.CTkButton(
+                        self.grid_frame,
+                        text="",
+                        width=35,
+                        height=35,
+                        corner_radius=2,
+                        fg_color="#1f538d",
+                        border_width=1,
+                        border_color="#14375e",
+                        command=lambda rr=r - 1, cc=c - 1: self.on_cell_click(rr, cc),
+                    )
                     btn.grid(row=r, column=c, padx=1, pady=1)
-                    self.cells[(r-1, c-1)] = btn
+                    self.cells[(r - 1, c - 1)] = btn
 
-        self.clear_btn = ctk.CTkButton(self.tab_single, text="Clear Board", fg_color="#8b0000", hover_color="#5c0000", command=self.clear_single)
+        self.clear_btn = ctk.CTkButton(
+            self.tab_single,
+            text="Clear Board",
+            fg_color="#8b0000",
+            hover_color="#5c0000",
+            command=self.clear_single,
+        )
         self.clear_btn.pack(pady=10)
 
     def on_cell_click(self, r, c):
         # Clear the input string because the user is modifying the board manually
         self.puzzle_input.delete(0, "end")
-        
+
         # Cycle to the next mode
         idx = (self.cell_mode_idx[(r, c)] + 1) % len(self.cell_modes)
         self.cell_mode_idx[(r, c)] = idx
@@ -192,20 +244,30 @@ class BattleshipGUI(ctk.CTk):
                     char = self.cell_modes[mode]
                     hints.append(f"{char}@[{r+1},{c+1}]")
 
-        prob_str = f"problem(999, [{fleet_str}], [{','.join(map(str, row_t))}], [{','.join(map(str, col_t))}], [{','.join(hints)}])."
+        row_str = ",".join(map(str, row_t))
+        col_str = ",".join(map(str, col_t))
+        hint_str = ",".join(hints)
+        prob_str = f"problem(999, [{fleet_str}], [{row_str}], [{col_str}], " f"[{hint_str}])."
         return prob_str
 
     def parse_single_string(self, content):
-        pattern = re.compile(r'problem\s*\(\s*(\d+)\s*,\s*\[(.*?)\]\s*,\s*\[(.*?)\]\s*,\s*\[(.*?)\]\s*,\s*\[(.*?)\]\s*\)\.', re.DOTALL)
+        pattern = re.compile(
+            r"problem\s*\(\s*(\d+)\s*,\s*\[(.*?)\]\s*,\s*\[(.*?)\]\s*,\s*" r"\[(.*?)\]\s*,\s*\[(.*?)\]\s*\)\.",
+            re.DOTALL,
+        )
         match = pattern.search(content)
-        if not match: return None
+        if not match:
+            return None
 
-        fleet_spec = {int(l): int(c) for l, c in [item.split(':') for item in match.group(2).split(',') if item]}
-        row_tallies = [int(x) for x in match.group(3).split(',') if x.strip()]
-        col_tallies = [int(x) for x in match.group(4).split(',') if x.strip()]
-        
+        fleet_spec = {
+            int(ship_length): int(count)
+            for ship_length, count in [item.split(":") for item in match.group(2).split(",") if item]
+        }
+        row_tallies = [int(x) for x in match.group(3).split(",") if x.strip()]
+        col_tallies = [int(x) for x in match.group(4).split(",") if x.strip()]
+
         hints = {}
-        hint_items = re.findall(r'([wcmlrtb])@\[\s*(\d+)\s*,\s*(\d+)\s*\]', match.group(5))
+        hint_items = re.findall(r"([wcmlrtb])@\[\s*(\d+)\s*,\s*(\d+)\s*\]", match.group(5))
         for h_type, r_str, c_str in hint_items:
             hints[(int(r_str) - 1, int(c_str) - 1)] = HINT_MAP[h_type]
 
@@ -214,37 +276,38 @@ class BattleshipGUI(ctk.CTk):
         return puzzle
 
     def clear_single(self):
-            """Resets the board to a blank state."""
-            # Clear text inputs
-            self.puzzle_input.delete(0, "end")
-            self.fleet_input.delete(0, "end")
-            self.fleet_input.insert(0, "4:1,3:2,2:3,1:4") # Default 10x10 fleet
+        """Resets the board to a blank state."""
+        # Clear text inputs
+        self.puzzle_input.delete(0, "end")
+        self.fleet_input.delete(0, "end")
+        self.fleet_input.insert(0, "4:1,3:2,2:3,1:4")  # Default 10x10 fleet
 
-            # Reset tallies to 0
-            for r in range(10):
-                if r in self.row_entries: 
-                    self.row_entries[r].delete(0, "end")
-                    self.row_entries[r].insert(0, "0")
-                if r in self.col_entries: 
-                    self.col_entries[r].delete(0, "end")
-                    self.col_entries[r].insert(0, "0")
+        # Reset tallies to 0
+        for r in range(10):
+            if r in self.row_entries:
+                self.row_entries[r].delete(0, "end")
+                self.row_entries[r].insert(0, "0")
+            if r in self.col_entries:
+                self.col_entries[r].delete(0, "end")
+                self.col_entries[r].insert(0, "0")
 
-            # Paint the grid back to standard water
-            for r in range(10):
-                for c in range(10):
-                    self.cell_mode_idx[(r, c)] = 0
-                    self.cells[(r, c)].configure(text="", fg_color="#1f538d")
+        # Paint the grid back to standard water
+        for r in range(10):
+            for c in range(10):
+                self.cell_mode_idx[(r, c)] = 0
+                self.cells[(r, c)].configure(text="", fg_color="#1f538d")
 
-            self.status_label.configure(text="Board cleared. Ready for new puzzle.", text_color="gray")
+        self.status_label.configure(text="Board cleared. Ready for new puzzle.", text_color="gray")
 
     def solve_single(self):
         puzzle_string = self.puzzle_input.get().strip()
-        
+
         # Check if the string box is empty
         if not puzzle_string:
             puzzle_string = self.build_string_from_grid()
-            if not puzzle_string: return # Error handled in builder
-            self.puzzle_input.insert(0, puzzle_string) # Show them the string built
+            if not puzzle_string:
+                return  # Error handled in builder
+            self.puzzle_input.insert(0, puzzle_string)  # Show them the string built
 
         # Parse the string
         puzzle = self.parse_single_string(puzzle_string)
@@ -254,20 +317,20 @@ class BattleshipGUI(ctk.CTk):
 
         # Update UI to match the parsed string
         self.fleet_input.delete(0, "end")
-        self.fleet_input.insert(0, ",".join([f"{l}:{c}" for l, c in puzzle.fleet_spec.items()]))
+        self.fleet_input.insert(0, ",".join([f"{ship_length}:{count}" for ship_length, count in puzzle.fleet_spec.items()]))
 
         for r, tally in enumerate(puzzle.row_tallies):
-            if r in self.row_entries: 
+            if r in self.row_entries:
                 self.row_entries[r].delete(0, "end")
                 self.row_entries[r].insert(0, str(tally))
         for c, tally in enumerate(puzzle.col_tallies):
-            if c in self.col_entries: 
+            if c in self.col_entries:
                 self.col_entries[c].delete(0, "end")
                 self.col_entries[c].insert(0, str(tally))
 
         # Reset Grid and Apply Hints
-        rev_map = {0: 'w', 1: 'c', 2: 'm', 3: 'l', 4: 'r', 5: 't', 6: 'b'}
-        
+        rev_map = {0: "w", 1: "c", 2: "m", 3: "l", 4: "r", 5: "t", 6: "b"}
+
         for r in range(10):
             for c in range(10):
                 self.cell_mode_idx[(r, c)] = 0
@@ -305,10 +368,10 @@ class BattleshipGUI(ctk.CTk):
             # Handle ship model format
             if isinstance(solution, list) and len(solution) > 0 and isinstance(solution[0], dict):
                 for cand in solution:
-                    for r, c in cand['cells']:
+                    for r, c in cand["cells"]:
                         if (r, c) not in puzzle.hints:
                             self.cells[(r, c)].configure(text="", fg_color="#a8a8a8")
-                            
+
             # Handle cell model format
             elif isinstance(solution, list) and isinstance(solution[0], list):
                 for r in range(len(solution)):
@@ -316,9 +379,16 @@ class BattleshipGUI(ctk.CTk):
                         if solution[r][c] == 1 and (r, c) not in puzzle.hints:
                             self.cells[(r, c)].configure(text="", fg_color="#a8a8a8")
 
-            self.status_label.configure(text=f"Solved successfully via {solver_choice} in {elapsed_time:.4f}s (Nodes Explored: {int(nodes)})", text_color="green")
+            self.status_label.configure(
+                text=f"Solved successfully via {solver_choice} in {elapsed_time:.4f}s (Nodes Explored: {int(nodes)})",
+                text_color="green",
+            )
         else:
-            self.status_label.configure(text=f"Puzzle is Infeasible! (Time: {elapsed_time:.4f}s)", text_color="red")
+            self.status_label.configure(
+                text=f"Puzzle is Infeasible! (Time: {elapsed_time:.4f}s)",
+                text_color="red",
+            )
+
 
 if __name__ == "__main__":
     app = BattleshipGUI()
