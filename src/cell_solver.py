@@ -139,26 +139,26 @@ class CellModelSolver:
                 else:
                     model.addConstr(x[r, c, BOTTOM] == 0)
 
-            # 6. Linearised Degree Contsraints (prevents ship overlapping)
-            for r in range(rows):
-                for c in range(cols):
-                    neighbors = []
-                    for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-                        nr, nc = r + dr, c + dc
-                        if 0 <= nr < rows and 0 <= nc < cols:
-                            neighbors.append(1 - x[nr, nc, WATER])
+        # 6. Linearised Degree Contsraints (prevents ship overlapping)
+        for r in range(rows):
+            for c in range(cols):
+                neighbors = []
+                for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < rows and 0 <= nc < cols:
+                        neighbors.append(1 - x[nr, nc, WATER])
 
-                    if neighbors:
-                        n_count = gp.quicksum(neighbors)
-                        # SUB: 0 neighbors
-                        model.addConstr(n_count <= 4 * (1 - x[r, c, SUB]))
-                        # ENDS: exactly 1 neighbor
-                        ends = x[r, c, LEFT] + x[r, c, RIGHT] + x[r, c, TOP] + x[r, c, BOTTOM]
-                        model.addConstr(n_count <= 1 + 3 * (1 - ends))
-                        model.addConstr(n_count >= 1 - 1 * (1 - ends))
-                        # MID: exactly 2 neighbors
-                        model.addConstr(n_count <= 2 + 2 * (1 - x[r, c, MID]))
-                        model.addConstr(n_count >= 2 - 2 * (1 - x[r, c, MID]))
+                if neighbors:
+                    n_count = gp.quicksum(neighbors)
+                    # SUB: 0 neighbors
+                    model.addConstr(n_count <= 4 * (1 - x[r, c, SUB]))
+                    # ENDS: exactly 1 neighbor
+                    ends = x[r, c, LEFT] + x[r, c, RIGHT] + x[r, c, TOP] + x[r, c, BOTTOM]
+                    model.addConstr(n_count <= 1 + 3 * (1 - ends))
+                    model.addConstr(n_count >= 1 - 1 * (1 - ends))
+                    # MID: exactly 2 neighbors
+                    model.addConstr(n_count <= 2 + 2 * (1 - x[r, c, MID]))
+                    model.addConstr(n_count >= 2 - 2 * (1 - x[r, c, MID]))
 
         # 7. Diagonal Constraints
         for r in range(rows - 1):

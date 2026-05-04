@@ -17,7 +17,7 @@ class BattleshipPuzzle:
         # Can be 0 for water or 1-4 for ship type
         self.hints = hints if hints else {}
         # Fleet length (for 10x10) then count
-        self.fleet_spec = {5: 1, 4: 1, 3: 2, 2: 3, 1: 4}
+        self.fleet_spec = {4: 1, 3: 2, 2: 3, 1: 4}
 
 
 class BattleshipBoard:

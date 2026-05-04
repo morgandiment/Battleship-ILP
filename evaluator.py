@@ -412,7 +412,7 @@ def plot_node_comparison(sizes, ship_nodes, cell_nodes, cell_improv_nodes, times
     # ax.set_yscale('symlog', linthresh=1.0)
     ax.set_yscale("linear")
 
-    ax.set_ylabel("Avg Branch & Bound Nodes (Symlog Scale)", fontsize=12, fontweight="bold")
+    ax.set_ylabel("Avg Branch & Bound Nodes", fontsize=12, fontweight="bold")
     ax.set_xlabel("Grid Size (Total Cells)", fontsize=12, fontweight="bold")
     ax.set_title(
         "Mathematical Complexity: Nodes Explored by Solver",
