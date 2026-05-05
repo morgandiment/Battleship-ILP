@@ -118,7 +118,8 @@ def format_as_prolog(id_num, size, fleet, grid, num_hints=5):
     return f"problem({id_num},\n    [{fleet_str}],\n    [{row_str}],\n    [{col_str}],\n    [{hint_str}])."
 
 
-def generate_dataset(filename, dynamic=False):
+def generate_dataset(filename, dynamic=False, seed=42):
+    random.seed(seed)
     """
     Generates a dataset of Battleship puzzles.
 
@@ -130,7 +131,7 @@ def generate_dataset(filename, dynamic=False):
     if dynamic:
         # Dynamic mode: scales fleets based on grid area
         grid_sizes = [10, 15, 20, 25, 30]
-        hint_counts = [0, 2, 4, 6, 8, 10]
+        hint_counts = [0, 2, 4, 6, 8, 10, 12, 14]
         instances_per_config = 5
 
         with open(filename, "w") as f:

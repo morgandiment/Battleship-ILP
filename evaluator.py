@@ -1,4 +1,5 @@
 import re
+import csv
 import time
 import argparse
 from datetime import datetime
@@ -159,7 +160,7 @@ def plot_scatter_results(ids, ship_times, cell_times, categories, timestamp, run
         va="center",
     )
 
-    ax.legend(loc="upper left", framealpha=0.9)
+    ax.legend(loc="lower right", framealpha=0.9)
     ax.grid(True, linestyle=":", alpha=0.6)
 
     out_file = run_dir / f"solver_difficulty_scatter_{timestamp}.png"
@@ -458,7 +459,8 @@ def run_evaluation(filepath, solver_choice):
     ship_solver = ShipModelSolver() if solver_choice in ["SHIP", "ALL"] else None
 
     # Data for graph
-    ids, ship_times, cell_times, cell_improv_times, categories, sizes = (
+    ids, ship_times, cell_times, cell_improv_times, categories, sizes, hint_counts = (
+        [],
         [],
         [],
         [],
@@ -476,6 +478,7 @@ def run_evaluation(filepath, solver_choice):
         sizes.append(size)
         ids.append(str(puzzle.id))
         categories.append(diff)
+        hint_counts.append(num_hints)
 
         ship_status = cell_status = cell_improv_status = "N/A"
 
@@ -588,6 +591,41 @@ def run_evaluation(filepath, solver_choice):
         run_dir = Path(__file__).resolve().parent / "results" / run_folder_name
         run_dir.mkdir(parents=True, exist_ok=True)
         print(f"\nSaving generated graphs to: {run_dir}/")
+
+        # CSV writer for raw data
+        csv_path = run_dir / f"raw_data_{run_timestamp}.csv"
+        with csv_path.open("w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                [
+                    "id",
+                    "size",
+                    "hints",
+                    "difficulty",
+                    "ship_time_s",
+                    "ship_nodes",
+                    "cell_time_s",
+                    "cell_nodes",
+                    "cell_improved_time_s",
+                    "cell_improved_nodes",
+                ]
+            )
+            for i in range(len(ids)):
+                writer.writerow(
+                    [
+                        ids[i],
+                        sizes[i],
+                        hint_counts[i],
+                        categories[i],
+                        f"{ship_times[i]:.6f}" if ship_times[i] > 0 else "",
+                        ship_nodes[i] if ship_nodes[i] >= 0 else "",
+                        f"{cell_times[i]:.6f}" if cell_times[i] > 0 else "",
+                        cell_nodes[i] if cell_nodes[i] >= 0 else "",
+                        f"{cell_improv_times[i]:.6f}" if cell_improv_times[i] > 0 else "",
+                        cell_improv_nodes[i] if cell_improv_nodes[i] >= 0 else "",
+                    ]
+                )
+        print(f"Full raw results available at: {csv_path}")
 
         # Plotting results
         plot_scatter_results(ids, ship_times, cell_times, categories, run_timestamp, run_dir)

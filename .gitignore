@@ -14,3 +14,5 @@ __pycache__/
 # Generated data
 data/scalable_puzzles.txt
 *.png
+*.csv
+scripts
