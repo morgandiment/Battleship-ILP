@@ -32,7 +32,7 @@ class ShipModelSolver:
         """
         # Generate ship placement candidates
         size = len(puzzle.row_tallies)
-        candidates = generate_ship_candidates(size, puzzle.fleet_spec)
+        candidates = generate_ship_candidates(size, puzzle.fleet_spec, puzzle.hints, puzzle.row_tallies, puzzle.col_tallies)
 
         model = gp.Model("BattleshipSolitaire", env=self.env)
 
@@ -173,7 +173,10 @@ class ShipModelSolver:
                     selected_candidates.append(cand)
             return selected_candidates, model.NodeCount
         else:
-            print("No solution found (Infeasible).")
-            # Debug line
-            # model.computeIIS(); model.write("model.ilp")
+            print("\nGurobi proved Infeasible. Calculating reason...")
+            model.computeIIS()
+            print("The following constraints are logically contradicting with each other:")
+            for c_info in model.getConstrs():
+                if c_info.IISConstr:
+                    print(f" -> {c_info.ConstrName}")
             return None

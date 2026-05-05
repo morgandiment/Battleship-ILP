@@ -16,9 +16,10 @@ class TestSolver(unittest.TestCase):
     def _run_solver_test(self, solver):
         """Helper method to test a solver."""
         # Full fleet tallies with hints
-        row_tallies = [1, 4, 1, 2, 6, 2, 2, 2, 3, 2]
-        col_tallies = [5, 1, 5, 1, 1, 5, 0, 2, 4, 1]
-        my_hints = {(1, 1): LEFT, (2, 5): MID, (7, 3): SUB}
+        row_tallies = [2, 3, 0, 4, 0, 1, 4, 3, 3, 0]
+        col_tallies = [1, 1, 1, 2, 1, 4, 4, 1, 1, 4]
+        # Hints are 0-indexed
+        my_hints = {(0, 6): WATER, (6, 8): RIGHT}
 
         puzzle = BattleshipPuzzle(row_tallies, col_tallies, hints=my_hints)
 
