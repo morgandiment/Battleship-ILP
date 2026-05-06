@@ -19,4 +19,5 @@ dist/
 data/scalable_puzzles.txt
 *.png
 *.csv
+*.xlsx
 scripts
