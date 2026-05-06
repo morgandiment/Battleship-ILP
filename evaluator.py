@@ -75,7 +75,7 @@ def parse_prolog_csplib(filepath):
 
 
 def get_difficulty(hints_dict):
-    """Categorises puzzle difficutly based on number of hints."""
+    """Categorises puzzle difficulty based on number of hints."""
     num_hints = len(hints_dict)
     if num_hints >= 10:
         return "Easy"

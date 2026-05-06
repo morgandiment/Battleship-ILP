@@ -139,7 +139,7 @@ class CellModelSolver:
                 else:
                     model.addConstr(x[r, c, BOTTOM] == 0)
 
-        # 6. Linearised Degree Contsraints (prevents ship overlapping)
+        # 6. Linearised Degree Constraints (prevents ship overlapping)
         for r in range(rows):
             for c in range(cols):
                 neighbors = []
@@ -149,16 +149,16 @@ class CellModelSolver:
                         neighbors.append(1 - x[nr, nc, WATER])
 
                 if neighbors:
-                    n_count = gp.quicksum(neighbors)
+                    neighbour_ship_count = gp.quicksum(neighbors)
                     # SUB: 0 neighbors
-                    model.addConstr(n_count <= 4 * (1 - x[r, c, SUB]))
-                    # ENDS: exactly 1 neighbor
-                    ends = x[r, c, LEFT] + x[r, c, RIGHT] + x[r, c, TOP] + x[r, c, BOTTOM]
-                    model.addConstr(n_count <= 1 + 3 * (1 - ends))
-                    model.addConstr(n_count >= 1 - 1 * (1 - ends))
+                    model.addConstr(neighbour_ship_count <= 4 * (1 - x[r, c, SUB]))
+                    # end_piece: exactly 1 neighbor
+                    end_piece = x[r, c, LEFT] + x[r, c, RIGHT] + x[r, c, TOP] + x[r, c, BOTTOM]
+                    model.addConstr(neighbour_ship_count <= 1 + 3 * (1 - end_piece))
+                    model.addConstr(neighbour_ship_count >= 1 - 1 * (1 - end_piece))
                     # MID: exactly 2 neighbors
-                    model.addConstr(n_count <= 2 + 2 * (1 - x[r, c, MID]))
-                    model.addConstr(n_count >= 2 - 2 * (1 - x[r, c, MID]))
+                    model.addConstr(neighbour_ship_count <= 2 + 2 * (1 - x[r, c, MID]))
+                    model.addConstr(neighbour_ship_count >= 2 - 2 * (1 - x[r, c, MID]))
 
         # 7. Diagonal Constraints
         for r in range(rows - 1):

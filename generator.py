@@ -10,15 +10,15 @@ def generate_dynamic_fleet(size):
     base_area = 100
     current_area = size * size
 
-    # Calculate a scaling multiplier
-    multiplier = math.ceil(current_area / base_area)
+    # Calculate a scaling factor
+    density_scale_factor = math.ceil(current_area / base_area)
 
     # Scale the standard CSPLib Battleship fleet
     fleet = {
-        4: 1 * multiplier,  # Battleships
-        3: 2 * multiplier,  # Cruisers
-        2: 3 * multiplier,  # Destroyers
-        1: 4 * multiplier,  # Submarines
+        4: 1 * density_scale_factor,  # Battleships
+        3: 2 * density_scale_factor,  # Cruisers
+        2: 3 * density_scale_factor,  # Destroyers
+        1: 4 * density_scale_factor,  # Submarines
     }
     return fleet
 
