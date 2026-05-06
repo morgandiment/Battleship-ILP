@@ -33,7 +33,7 @@ class TextboxRedirector:
 class BattleshipGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("Battleship Solitaire Optimizer")
+        self.title("Battleship Solitaire Optimiser")
         self.geometry("900x750")
 
         self.tabview = ctk.CTkTabview(self, width=850, height=700)
