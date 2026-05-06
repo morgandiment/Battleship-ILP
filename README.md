@@ -48,7 +48,7 @@ pip install -r requirements.txt
 ## Usage
 
 ### Interactive GUI
-Launch the visualizer to build, import, and solve puzzles in real-time. The GUI runs Gurobi on background threads to maintain responsiveness.
+Launch the visualiser to build, import, and solve puzzles in real-time. The GUI runs Gurobi on background threads to maintain responsiveness.
 ```bash
 python gui.py
 ```
